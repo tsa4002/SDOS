@@ -43,6 +43,7 @@ def search_artist():
         suggestions = [{
             'name': artist['name'],
             'id': artist['id'],
+            'image': artist['images'][0]['url'] if artist.get('images') else None,
             'popularity': artist.get('popularity', 0),
             'genres': artist.get('genres', [])
         } for artist in sorted_artists]

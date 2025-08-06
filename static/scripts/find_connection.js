@@ -5,6 +5,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const linkIcon = document.getElementById('linkIcon');
   const spinner = document.getElementById('spinner');
 
+  const selectedImages = {
+    artist1: document.getElementById('selected-artist1-img'),
+    artist2: document.getElementById('selected-artist2-img'),
+  };
+
   // --- AUTOCOMPLETE SETUP ---
   function setupAutocomplete(inputId) {
     const input = document.getElementById(inputId);
@@ -16,7 +21,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let debounceTimeout;
 
+    // Reset image on typing again
     input.addEventListener('input', () => {
+      selectedImages[inputId].style.display = 'none';
+      selectedImages[inputId].src = '';
+      
       clearTimeout(debounceTimeout);
       debounceTimeout = setTimeout(async () => {
         const query = input.value.trim();
@@ -34,17 +43,33 @@ document.addEventListener('DOMContentLoaded', () => {
           if (suggestions.length === 0) {
             dropdown.innerHTML = '<div class="autocomplete-item no-results">No results</div>';
           } else {
-            dropdown.innerHTML = suggestions.map(a =>
-              `<div class="autocomplete-item" data-name="${a.name}">${a.name}</div>`
-            ).join('');
+            dropdown.innerHTML = suggestions.map(a => {
+              const img = a.image || '/static/default_avatar.png';
+              return `
+                <div class="autocomplete-item" 
+                     data-name="${a.name}" 
+                     data-img="${img}">
+                  <img src="${img}" alt="${a.name}" class="artist-thumb" />
+                  <span>${a.name}</span>
+                </div>`;
+            }).join('');
           }
+
           dropdown.style.display = 'block';
 
           dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
             item.addEventListener('click', () => {
-              input.value = item.dataset.name;
+              const name = item.dataset.name;
+              const img = item.dataset.img || '/static/default_avatar.png';
+              input.value = name;
               dropdown.style.display = 'none';
               input.focus();
+
+              const imgEl = selectedImages[inputId];
+              if (imgEl) {
+                imgEl.src = img;
+                imgEl.style.display = 'block';
+              }
             });
           });
         } catch (err) {
@@ -158,6 +183,12 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsDiv.innerHTML = '';
         form.reset();
         form.artist1.focus();
+
+        // Hide artist images again on reset
+        selectedImages.artist1.style.display = 'none';
+        selectedImages.artist1.src = '';
+        selectedImages.artist2.style.display = 'none';
+        selectedImages.artist2.src = '';
       });
 
     } catch (error) {

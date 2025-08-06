@@ -15,35 +15,45 @@
 
   <form id="connectionForm">
     <div class="input-container">
+
+      <!-- Artist 1 (image on left) -->
       <div class="input-wrapper">
-        <input 
-          type="text" 
-          id="artist1" 
-          name="artist1" 
-          placeholder="Enter first artist" 
-          required
-          autocomplete="off" 
-        />
-        <!-- Autocomplete dropdown will be appended here -->
+        <div class="selected-artist">
+          <img id="selected-artist1-img" class="artist-thumbnail left" src="" alt="Artist 1" style="display: none;" />
+          <input 
+            type="text" 
+            id="artist1" 
+            name="artist1" 
+            placeholder="Enter first artist" 
+            required
+            autocomplete="off" 
+          />
+        </div>
+        <ul class="suggestions" id="suggestions1"></ul>
       </div>
 
-      <!-- Replace your current link icon container with this -->
+      <!-- Link icon -->
       <div class="link-icon" id="linkIconWrapper">
         <img src="{{ url_for('static', filename='../static/icons/link_icon.png') }}" id="linkIcon" alt="link" />
         <div id="spinner" class="hidden spinner"></div>
       </div>
 
-      <div class="input-wrapper">
-        <input 
-          type="text" 
-          id="artist2" 
-          name="artist2" 
-          placeholder="Enter second artist" 
-          required
-          autocomplete="off" 
-        />
-        <!-- Autocomplete dropdown will be appended here -->
+      <!-- Artist 2 -->
+      <div class="input-wrapper artist2">
+        <div class="selected-artist">
+          <img id="selected-artist2-img" src="" alt="Artist 2" style="display: none;" />
+          <input 
+            type="text" 
+            id="artist2" 
+            name="artist2" 
+            placeholder="Enter second artist" 
+            required
+            autocomplete="off" 
+          />
+        </div>
+        <ul class="suggestions" id="suggestions2"></ul>
       </div>
+
     </div>
 
     <div class="button-container">
@@ -57,5 +67,3 @@
   <script src="/static/scripts/find_connection.js"></script>
 </body>
 </html>
-
-

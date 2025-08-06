@@ -1,10 +1,20 @@
+/* Box sizing reset for consistent sizing */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
-body {
+/* Core layout for full viewport without scroll */
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+/* Main page wrapper */
+.page {
   font-family: 'Inter', sans-serif;
   background-color: #ffffff;
   color: #111;
@@ -12,17 +22,15 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
-  margin: 0;
   padding: 20px;
+  height: 100%;
   background-image: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.5), transparent 70%),
                     radial-gradient(circle at 70% 70%, rgba(240, 240, 255, 0.3), transparent 70%);
   background-repeat: no-repeat;
   background-size: cover;
 }
 
-
-
+/* Typography */
 h1 {
   font-size: 2.5rem;
   margin-bottom: 0.5rem;
@@ -40,6 +48,7 @@ p {
   color: #555;
 }
 
+/* Input Section */
 .input-container {
   display: flex;
   align-items: center;
@@ -47,6 +56,10 @@ p {
   justify-content: center;
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
+}
+
+.input-wrapper {
+  position: relative;
 }
 
 input {
@@ -72,13 +85,7 @@ input:focus {
   transform: scale(1.03);
 }
 
-.link-icon img {
-  width: 28px;
-  height: 28px;
-  opacity: 0.7;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
-}
-
+/* Buttons */
 .button-container {
   display: flex;
   justify-content: center;
@@ -103,23 +110,33 @@ button:hover {
   transform: translateY(-2px);
 }
 
+/* Results */
 #results {
   margin-top: 20px;
   text-align: center;
   color: #222;
 }
 
-
-/* Hide by default */
+/* Hide utility */
 .hidden {
   display: none;
 }
+
+/* Link icon */
 .link-icon {
   width: 30px;
   height: 30px;
   position: relative;
 }
 
+.link-icon img {
+  width: 28px;
+  height: 28px;
+  opacity: 0.7;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+}
+
+/* Loading Spinner */
 .spinner {
   border: 4px solid transparent;
   border-top: 4px solid #52aaed;
@@ -151,81 +168,7 @@ button:hover {
   }
 }
 
-
-/* Override for second artist container */
-.input-wrapper.artist2 .selected-artist {
-  flex-direction: row-reverse;  /* Image on right, input on left */
-  gap: 8px;
-}
-
-.input-wrapper.artist2 input {
-  padding: 12px 25px;
-}
-
-/* Common: make wrapper a positioning context */
-.input-wrapper {
-  position: relative;
-}
-
-/* Artist 1 image on the left */
-#selected-artist1-img {
-  position: absolute;
-  left: -60px;                  /* distance from the left border */
-  top: 50%;
-  transform: translateY(-50%);
-  display: none;              /* shown only after selection */
-}
-
-/* Artist 2 image on the right */
-#selected-artist2-img {
-  position: absolute;
-  right: -60px;                 /* distance from the right border */
-  top: 50%;
-  transform: translateY(-50%);
-  display: none;
-}
-
-
-.input-wrapper {
-  position: relative;
-}
-.autocomplete-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
-  background: white;
-  border-radius: 8px;      /* Rounded corners */
-  max-height: 150px;
-  overflow-y: auto;
-  z-index: 10;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
-.autocomplete-item {
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-.autocomplete-item:hover,
-.autocomplete-item.active {
-  background-color: #1db954;
-  color: white;
-}
-
-.autocomplete-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
-}
-
-.artist-thumb {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
+/* Selected artist layout */
 .selected-artist {
   display: flex;
   align-items: center;
@@ -240,3 +183,65 @@ button:hover {
   object-fit: cover;
 }
 
+/* Artist 1 image on the left */
+#selected-artist1-img {
+  position: absolute;
+  left: -60px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+}
+
+/* Artist 2 image on the right */
+#selected-artist2-img {
+  position: absolute;
+  right: -60px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+}
+
+/* Flip layout for artist 2 */
+.input-wrapper.artist2 .selected-artist {
+  flex-direction: row-reverse;
+  gap: 8px;
+}
+
+.input-wrapper.artist2 input {
+  padding: 12px 25px;
+}
+
+/* Autocomplete dropdown */
+.autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.active {
+  background-color: #1db954;
+  color: white;
+}
+
+.artist-thumb {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}

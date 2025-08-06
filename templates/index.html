@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Six Degrees of Sound</title>
+  <link rel="stylesheet" href="/static/frontpage_stylesheet.css" />
+  <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/connection_stylesheet.css" />
+</head>
+<body>
+  <h1>Six Degrees of Sound</h1>
+  <p>Link any two artists using overlapping collaborations.</p>
+
+  <form id="connectionForm">
+    <div class="input-container">
+      <div class="input-wrapper">
+        <input 
+          type="text" 
+          id="artist1" 
+          name="artist1" 
+          placeholder="Enter first artist" 
+          required
+          autocomplete="off" 
+        />
+        <!-- Autocomplete dropdown will be appended here -->
+      </div>
+
+      <!-- Replace your current link icon container with this -->
+      <div class="link-icon" id="linkIconWrapper">
+        <img src="{{ url_for('static', filename='../static/icons/link_icon.png') }}" id="linkIcon" alt="link" />
+        <div id="spinner" class="hidden spinner"></div>
+      </div>
+
+      <div class="input-wrapper">
+        <input 
+          type="text" 
+          id="artist2" 
+          name="artist2" 
+          placeholder="Enter second artist" 
+          required
+          autocomplete="off" 
+        />
+        <!-- Autocomplete dropdown will be appended here -->
+      </div>
+    </div>
+
+    <div class="button-container">
+      <button type="submit">Find Connection</button>
+    </div>
+  </form>
+
+  <div id="loading-bar" class="loading-bar hidden"></div>
+  <div id="results"></div>
+
+  <script src="/static/scripts/find_connection.js"></script>
+</body>
+</html>
+
+

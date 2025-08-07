@@ -56,7 +56,7 @@ def save_cache():
 
 # --- Helpers ---
 def select_artist(name):
-    results = spotify_call(sp.search, q=f"artist:{name}", type="artist", limit=10)
+    results = spotify_call(sp.search, q=f"artist:{name}", type="artist", limit=6)
     artists = results["artists"]["items"]
     if not artists:
         print(f"No artists found for '{name}'. Try again.")

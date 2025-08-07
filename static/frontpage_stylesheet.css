@@ -98,7 +98,7 @@ button {
   font-size: 1rem;
   border: none;
   border-radius: 10px;
-  background-color: #1db954;
+  background-color: #9362dd;
   color: white;
   cursor: pointer;
   transition: background-color 0.3s ease, transform 0.2s ease;
@@ -106,7 +106,7 @@ button {
 }
 
 button:hover {
-  background-color: #169c45;
+  background-color: #b585fd;
   transform: translateY(-2px);
 }
 
@@ -219,7 +219,7 @@ button:hover {
   right: 0;
   background: white;
   border-radius: 8px;
-  max-height: 150px;
+  max-height: 250px;
   overflow-y: auto;
   z-index: 10;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
@@ -244,4 +244,37 @@ button:hover {
   height: 50px;
   border-radius: 50%;
   object-fit: cover;
+}
+
+.link-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100px;  /* Set based on SVG size */
+  height: 60px;  /* Adjust if needed */
+  transform: translateY(-5px); /* move up by 10px */
+  flex-shrink: 0;
+}
+
+.static-icon {
+  width: 80px;
+  height: 40px;
+  pointer-events: none;
+}
+
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+input.shake {
+  animation: shake 0.4s ease;
+  position: relative; /* Prevent layout shift */
+  border: 1px solid red;
+}
+
+.autocomplete-item.highlighted {
+  background-color: #8a88884e;
 }

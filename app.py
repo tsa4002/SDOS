@@ -27,6 +27,9 @@ def connect_artists():
 
     return jsonify({'path': path})
 
+
+from rapidfuzz import fuzz
+
 @app.route('/search_artist')
 def search_artist():
     query = request.args.get('q', '').strip()
@@ -34,23 +37,35 @@ def search_artist():
         return jsonify({'artists': []})
 
     try:
-        results = link_artists.sp.search(q=f"artist:{query}", type="artist", limit=6)
+        results = link_artists.sp.search(q=f"artist:{query}", type="artist", limit=30)
         artists = results.get('artists', {}).get('items', [])
 
-        # Sort by popularity, descending
-        sorted_artists = sorted(artists, key=lambda x: x.get('popularity', 0), reverse=True)
+        # Calculate fuzzy similarity score
+        for artist in artists:
+            artist['similarity'] = fuzz.ratio(query.lower(), artist['name'].lower())
+
+        # Sort first by popularity (secondary), then by similarity (primary)
+        artists_sorted = sorted(
+            artists,
+            key=lambda x: (x['similarity'], x.get('popularity', 0)),
+            reverse=True
+        )
 
         suggestions = [{
             'name': artist['name'],
             'id': artist['id'],
             'image': artist['images'][0]['url'] if artist.get('images') else None,
             'popularity': artist.get('popularity', 0),
-            'genres': artist.get('genres', [])
-        } for artist in sorted_artists]
+            'genres': artist.get('genres', []),
+            'similarity': artist['similarity']  # optional, remove in production
+        } for artist in artists_sorted]
 
         return jsonify({'artists': suggestions})
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, debug=True)

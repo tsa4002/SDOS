@@ -1,200 +1,228 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('connectionForm');
+  const form       = document.getElementById('connectionForm');
   const resultsDiv = document.getElementById('results');
+  const loaderObj  = document.getElementById('linkIcon');
 
-  const linkIcon = document.getElementById('linkIcon');
-  const spinner = document.getElementById('spinner');
+  // Pause SVG animation on load
+  loaderObj.addEventListener('load', () => {
+    const svgDoc = loaderObj.contentDocument;
+    if (svgDoc) svgDoc.documentElement.pauseAnimations();
+  });
+
+  function startLoader() {
+    const svgDoc = loaderObj.contentDocument;
+    if (svgDoc) svgDoc.documentElement.unpauseAnimations();
+  }
+
+  function stopLoader() {
+    const svgDoc = loaderObj.contentDocument;
+    if (svgDoc) svgDoc.documentElement.pauseAnimations();
+  }
 
   const selectedImages = {
     artist1: document.getElementById('selected-artist1-img'),
     artist2: document.getElementById('selected-artist2-img'),
   };
 
-  // --- AUTOCOMPLETE SETUP ---
-  function setupAutocomplete(inputId) {
-    const input = document.getElementById(inputId);
-    const wrapper = input.parentElement;
+  function shakeElement(el) {
+    el.classList.add('shake');
+    setTimeout(() => el.classList.remove('shake'), 400);
+  }
 
-    let dropdown = document.createElement('div');
+  function setupAutocomplete(inputId) {
+    const input    = document.getElementById(inputId);
+    const wrapper  = input.parentElement;
+    const dropdown = document.createElement('div');
     dropdown.className = 'autocomplete-dropdown';
     wrapper.appendChild(dropdown);
 
-    let debounceTimeout;
+    let debounceTimeout, selectedIndex = -1;
 
-    // Reset image on typing again
     input.addEventListener('input', () => {
-      selectedImages[inputId].style.display = 'none';
-      selectedImages[inputId].src = '';
-      
+      stopLoader();
+
+      // Reset thumbnail if typing again
+      const imgEl = selectedImages[inputId];
+      imgEl.style.display = 'none';
+      imgEl.src = '';
+
       clearTimeout(debounceTimeout);
       debounceTimeout = setTimeout(async () => {
-        const query = input.value.trim();
-        if (!query) {
+        const q = input.value.trim();
+        if (!q) {
           dropdown.innerHTML = '';
           dropdown.style.display = 'none';
+          selectedIndex = -1;
           return;
         }
-        try {
-          const res = await fetch(`/search_artist?q=${encodeURIComponent(query)}`);
-          if (!res.ok) throw new Error('Autocomplete fetch failed');
-          const data = await res.json();
-          const suggestions = data.artists || [];
 
-          if (suggestions.length === 0) {
-            dropdown.innerHTML = '<div class="autocomplete-item no-results">No results</div>';
+        try {
+          const res = await fetch(`/search_artist?q=${encodeURIComponent(q)}`);
+          if (!res.ok) throw new Error();
+          const { artists } = await res.json();
+          
+          if (!artists.length) {
+            dropdown.innerHTML = `<div class="autocomplete-item no-results">No results</div>`;
           } else {
-            dropdown.innerHTML = suggestions.map(a => {
+            dropdown.innerHTML = artists.map(a => {
               const img = a.image || '/static/default_avatar.png';
               return `
                 <div class="autocomplete-item" 
                      data-name="${a.name}" 
                      data-img="${img}">
-                  <img src="${img}" alt="${a.name}" class="artist-thumb" />
+                  <img src="${img}" class="artist-thumb" alt="${a.name}" />
                   <span>${a.name}</span>
                 </div>`;
             }).join('');
           }
 
           dropdown.style.display = 'block';
+          selectedIndex = -1;
 
+          // Click handlers
           dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+            if (item.classList.contains('no-results')) return;
             item.addEventListener('click', () => {
               const name = item.dataset.name;
-              const img = item.dataset.img || '/static/default_avatar.png';
+              const img  = item.dataset.img;
               input.value = name;
               dropdown.style.display = 'none';
               input.focus();
 
-              const imgEl = selectedImages[inputId];
-              if (imgEl) {
-                imgEl.src = img;
-                imgEl.style.display = 'block';
-              }
+              const imgEl2 = selectedImages[inputId];
+              imgEl2.src = img;
+              imgEl2.style.display = 'block';
             });
           });
-        } catch (err) {
-          dropdown.innerHTML = '<div class="autocomplete-item no-results">Error loading results</div>';
+        } catch {
+          dropdown.innerHTML = `<div class="autocomplete-item no-results">Error loading results</div>`;
           dropdown.style.display = 'block';
+          selectedIndex = -1;
         }
       }, 300);
     });
 
+    // Keyboard navigation
+    input.addEventListener('keydown', e => {
+      const items = dropdown.querySelectorAll('.autocomplete-item:not(.no-results)');
+      if (!items.length) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex + 1) % items.length;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+      } else if (e.key === 'Enter' && selectedIndex >= 0) {
+        e.preventDefault();
+        items[selectedIndex].click();
+        return;
+      } else {
+        return;
+      }
+
+      // Highlight
+      items.forEach((it, i) => it.classList.toggle('highlighted', i === selectedIndex));
+      items[selectedIndex].scrollIntoView({ block: 'nearest' });
+    });
+
+    // Hide on blur
     input.addEventListener('blur', () => {
-      setTimeout(() => {
-        dropdown.style.display = 'none';
-      }, 200);
+      setTimeout(() => dropdown.style.display = 'none', 200);
     });
   }
 
+  // Initialize both inputs
   setupAutocomplete('artist1');
   setupAutocomplete('artist2');
 
-  // --- Helper to clean track titles ---
   function cleanTrackTitle(title) {
-    title = title.replace(/\s*\([^)]*\)/g, '');
-    title = title.replace(/\s*(feat\.?|ft\.?|featured)\s*.*$/i, '');
-    return title.trim();
+    return title
+      .replace(/\s*\([^)]*\)/g, '')
+      .replace(/\s*(feat\.?|ft\.?|featured)\s*.*$/i, '')
+      .trim();
   }
 
-  // --- Spinner Control ---
-  function showSpinner() {
-    if (linkIcon && spinner) {
-      linkIcon.classList.add('hidden');
-      spinner.classList.remove('hidden');
-    }
-  }
-
-  function hideSpinner() {
-    if (linkIcon && spinner) {
-      spinner.classList.add('hidden');
-      linkIcon.classList.remove('hidden');
-    }
-  }
-
-  // --- FORM SUBMISSION ---
-  form.addEventListener('submit', async (event) => {
+  // Submit handler with thumbnail check
+  form.addEventListener('submit', async event => {
     event.preventDefault();
     resultsDiv.innerHTML = '';
-    showSpinner();
 
-    const artist1 = form.artist1.value.trim();
-    const artist2 = form.artist2.value.trim();
+    const img1Vis = selectedImages.artist1.style.display === 'block';
+    const img2Vis = selectedImages.artist2.style.display === 'block';
+    let invalid = false;
 
-    if (!artist1 || !artist2) {
-      hideSpinner();
-      resultsDiv.textContent = 'Please enter both artist names.';
+    if (!img1Vis) {
+      shakeElement(form.artist1);
+      invalid = true;
+    }
+    if (!img2Vis) {
+      shakeElement(form.artist2);
+      invalid = true;
+    }
+    if (invalid) {
+      stopLoader();
       return;
     }
 
+    startLoader();
     try {
-      const response = await fetch('/connect', {
+      const resp = await fetch('/connect', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ artist1, artist2 })
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          artist1: form.artist1.value.trim(),
+          artist2: form.artist2.value.trim()
+        })
       });
 
-      if (!response.ok) {
-        hideSpinner();
-        const errorData = await response.json();
-        resultsDiv.textContent = errorData.error || 'Error finding connection.';
+      if (!resp.ok) {
+        stopLoader();
+        const err = await resp.json();
+        resultsDiv.textContent = err.error || 'Error finding connection.';
         return;
       }
 
-      const data = await response.json();
-      const path = data.path;
-
-      if (!path || path.length === 0) {
-        hideSpinner();
-        resultsDiv.textContent = 'No connection found between these artists.';
+      const { path } = await resp.json();
+      if (!path || !path.length) {
+        stopLoader();
+        resultsDiv.textContent = 'No connection found';
         return;
       }
 
-      let html = `<h2>Link'N'Listen</h2>`;
-      html += `<div class="path-container">`;
-
-      path.forEach(([fromArtist, toArtist, track]) => {
-        const cleanTitle = cleanTrackTitle(track);
+      let html = `<h2>Link'N'Listen</h2><div class="path-container">`;
+      path.forEach(([from, to, track]) => {
+        const clean = cleanTrackTitle(track);
         html += `
           <div class="card-wrapper">
             <div class="song-card">
-              <img src="/static/default_cover.png" alt="Cover Art for ${cleanTitle}" class="cover-art" />
+              <img src="/static/default_cover.png" alt="${clean}" class="cover-art" />
             </div>
             <div class="links">
-              <a href="#" target="_blank"><img src="/static/icons/spotify-icon.png" alt="Spotify"></a>
-              <a href="#" target="_blank"><img src="/static/icons/youtube-icon.png" alt="YouTube"></a>
-              <a href="#" target="_blank"><img src="/static/icons/apple-icon.png" alt="Apple Music"></a>
+              <a href="#"><img src="/static/icons/spotify-icon.png" alt="Spotify"></a>
+              <a href="#"><img src="/static/icons/youtube-icon.png" alt="YouTube"></a>
+              <a href="#"><img src="/static/icons/apple-icon.png" alt="Apple Music"></a>
             </div>
-            <div class="info">
-              <strong>${cleanTitle}</strong><br/>
-              by ${fromArtist} &amp; ${toArtist}
-            </div>
-          </div>
-        `;
+            <div class="info"><strong>${clean}</strong><br/>by ${from} &amp; ${to}</div>
+          </div>`;
       });
-
-      html += `</div>`;
-      html += `<footer><button id="tryAgainBtn">Try Another Route</button></footer>`;
-
+      html += `</div><footer><button id="tryAgainBtn">Try Another Route</button></footer>`;
       resultsDiv.innerHTML = html;
 
       document.getElementById('tryAgainBtn').addEventListener('click', () => {
         resultsDiv.innerHTML = '';
         form.reset();
         form.artist1.focus();
-
-        // Hide artist images again on reset
         selectedImages.artist1.style.display = 'none';
         selectedImages.artist1.src = '';
         selectedImages.artist2.style.display = 'none';
         selectedImages.artist2.src = '';
       });
-
-    } catch (error) {
-      resultsDiv.textContent = `Unexpected error: ${error.message}`;
+    } catch (e) {
+      resultsDiv.textContent = `Unexpected error: ${e.message}`;
     } finally {
-      hideSpinner();
+      stopLoader();
     }
   });
 });
+

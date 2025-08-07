@@ -245,38 +245,43 @@ def find_path(start_name, end_name):
         to_name   = name_map[to]
         query     = f'track:{track} artist:{from_name}'
 
-        # fetch Spotify track
+        # 1) initial search for track
         try:
             search_res = spotify_call(sp.search, q=query, type='track', limit=1)
             items      = search_res.get("tracks", {}).get("items", [])
-            if items:
-                track_obj   = items[0]
-                image       = track_obj["album"]["images"][0]["url"] if track_obj["album"]["images"] else None
-                spotify_url = track_obj["external_urls"].get("spotify")
-                preview_url = track_obj.get("preview_url")  # <-- NEW
-            else:
-                image, spotify_url, preview_url = (None, None, None)
         except Exception as e:
-            print(f"Could not fetch data for track '{track}': {e}")
-            image, spotify_url, preview_url = (None, None, None)
+            print(f"Search failed for '{track}': {e}")
+            items = []
+
+        if items:
+            top = items[0]
+            track_id = top["id"]
+            # 2) full track lookup to guarantee preview_url field
+            try:
+                full = spotify_call(sp.track, track_id)
+                image       = full["album"]["images"][0]["url"] if full["album"]["images"] else None
+                spotify_url = full["external_urls"].get("spotify")
+                preview_url = full.get("preview_url")
+            except Exception as e:
+                print(f"Track lookup failed for '{track_id}': {e}")
+                image, spotify_url, preview_url = None, None, None
+        else:
+            image, spotify_url, preview_url = None, None, None
 
         # fallback search URLs
-        yt_query    = f"{track} {from_name} {to_name}".replace(" ", "+")
+        yt_query    = urllib.parse.quote_plus(f"{track} {from_name} {to_name}")
         youtube_url = f"https://www.youtube.com/results?search_query={yt_query}"
-
-        country = "us"  # or another two-letter country code
-        term   = urllib.parse.quote(f"{track} {from_name} {to_name}")
-        apple_url = f"https://music.apple.com/{country}/search?term={term}"
+        apple_url   = f"https://music.apple.com/us/search?term={yt_query}"
 
         result.append({
-            "from"       : from_name,
-            "to"         : to_name,
-            "track"      : track,
-            "image"      : image,
-            "spotify"    : spotify_url,
-            "youtube"    : youtube_url,
-            "apple"      : apple_url,
-            "preview"    : preview_url   # <-- NEW
+            "from"    : from_name,
+            "to"      : to_name,
+            "track"   : track,
+            "image"   : image,
+            "spotify" : spotify_url,
+            "youtube" : youtube_url,
+            "apple"   : apple_url,
+            "preview" : preview_url
         })
 
     return result

@@ -5,10 +5,11 @@
   box-sizing: border-box;
 }
 
-/* Core layout for full viewport without scroll */
+/* Core layout for full viewport without horizontal scroll */
 html, body {
   height: 100%;
   overflow-x: hidden;
+  overflow-y: auto;   /* allow vertical scrolling when content grows */
   margin: 0;
   padding: 0;
 }
@@ -20,14 +21,14 @@ html, body {
   color: #111;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: center;       /* center horizontally */
+  justify-content: center;   /* center vertically when content is short */
+  min-height: 100vh;         /* ensures vertical centering for short pages */
   padding: 20px;
-  height: 100%;
-  background-image: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.5), transparent 70%),
-                    radial-gradient(circle at 70% 70%, rgba(240, 240, 255, 0.3), transparent 70%);
   background-repeat: no-repeat;
   background-size: cover;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Typography */
@@ -60,14 +61,17 @@ p {
 
 .input-wrapper {
   position: relative;
+  flex: 1;              /* allow input wrapper to grow */
+  min-width: 200px;     /* prevent it from getting too small */
+  max-width: 400px;     /* optional upper limit */
 }
 
 input {
+  width: 100%;          /* fill the wrapper’s space */
   padding: 12px 25px;
   font-size: 1rem;
   border-radius: 12px;
   border: 1px solid #ccc;
-  width: 180px;
   text-align: center;
   background-color: #f9f9f9;
   transition: box-shadow 0.3s ease, transform 0.2s ease;
@@ -84,6 +88,7 @@ input:focus {
   box-shadow: 0 0 0 3px rgba(0, 200, 255, 0.3);
   transform: scale(1.03);
 }
+
 
 /* Buttons */
 .button-container {
@@ -120,52 +125,6 @@ button:hover {
 /* Hide utility */
 .hidden {
   display: none;
-}
-
-/* Link icon */
-.link-icon {
-  width: 30px;
-  height: 30px;
-  position: relative;
-}
-
-.link-icon img {
-  width: 28px;
-  height: 28px;
-  opacity: 0.7;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
-}
-
-/* Loading Spinner */
-.spinner {
-  border: 4px solid transparent;
-  border-top: 4px solid #52aaed;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  animation: spin 1s linear infinite, colorShift 2s linear infinite;
-  margin: auto;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes colorShift {
-  0% {
-    border-top-color: #52aaed;
-  }
-  50% {
-    border-top-color: #e14141;
-  }
-  100% {
-    border-top-color: #52aaed;
-  }
 }
 
 /* Selected artist layout */
@@ -240,8 +199,8 @@ button:hover {
 }
 
 .artist-thumb {
-  width: 50px;
-  height: 50px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -262,7 +221,6 @@ button:hover {
   pointer-events: none;
 }
 
-
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   20%, 60% { transform: translateX(-6px); }
@@ -278,3 +236,4 @@ input.shake {
 .autocomplete-item.highlighted {
   background-color: #8a88884e;
 }
+

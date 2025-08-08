@@ -1,11 +1,3 @@
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: #ffffff;
-  color: #111;
-  margin: 0;
-  padding: 20px;
-}
-
 h1 {
   text-align: center;
   margin-bottom: 1rem;
@@ -13,12 +5,13 @@ h1 {
 
 .path-container {
   display: flex;
-  flex-wrap: wrap;
-  gap: 32px 26px;   /* 32px between rows, 16px between cards horizontally */
+  flex-direction: column;  /* stack vertically */
+  gap: 42px;               /* vertical gap between cards */
   padding: 0 20px 20px;
   justify-content: flex-start;
   max-width: 900px;
   margin: 0 auto;
+  align-items: center; /* center cards horizontally */
 }
 
 .card-wrapper {
@@ -26,6 +19,7 @@ h1 {
   flex-direction: column;
   align-items: center;
   width: 180px;
+  position: relative; /* for step number */
 }
 
 /* Just the cover art square */
@@ -38,6 +32,7 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;  /* enable absolute children */
 }
 
 .cover-art {
@@ -73,28 +68,6 @@ h1 {
   line-height: 1.2;
 }
 
-/* Footer button */
-footer {
-  text-align: center;
-  margin-top: 2rem;
-}
-
-footer button {
-  padding: 10px 20px;
-  background-color: #1db954;
-  border: none;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-}
-
-.song-card {
-  position: relative;  /* enable absolute children */
-  overflow: hidden;
-}
-
 .play-btn {
   position: absolute;
   top: 50%;
@@ -127,4 +100,98 @@ footer button {
 .play-btn.playing {
   border-color: #1db954;
   background: rgba(29,185,84,0.8);
+}
+
+.path-container .card-wrapper:first-child {
+  margin-top: 20px; /* adjust the value as needed */
+}
+
+.step-number {
+  position: absolute;
+  top: -24px;       /* above the cover art */
+  left: 50%;        /* center horizontally */
+  transform: translateX(-50%);
+  color: black;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;   /* no fill */
+  border: 2px solid black;         /* outline circle */
+  box-shadow: none;                /* remove shadow */
+  user-select: none;
+}
+
+/* Footer container */
+footer {
+  margin-top: 2rem;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 20px;
+}
+
+/* Flex container for the three footer buttons */
+.footer-buttons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Common styles for all footer buttons */
+.footer-buttons button {
+  background-color: #1db954;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+/* Hover effect for all footer buttons */
+.footer-buttons button:hover {
+  background-color: #17a74a;
+  transform: scale(1.05);
+}
+
+/* Smaller, circular icon buttons */
+.footer-buttons button#refreshBtn,
+.footer-buttons button#shareBtn {
+  padding: 10px;
+  width: 44px;
+  height: 44px;
+  background-color: transparent;
+  border-radius: 50%;
+  color: inherit;
+  transition: background-color 0.3s ease;
+}
+
+.footer-buttons button#refreshBtn:hover,
+.footer-buttons button#shareBtn:hover {
+  background-color: rgba(29, 185, 84, 0.15);
+}
+
+/* Center the Try Another Route button */
+.footer-buttons #tryAgainBtn {
+  min-width: 160px;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
+/* Icon images inside footer buttons */
+.footer-buttons button img {
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+  user-select: none;
 }

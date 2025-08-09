@@ -1,10 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const form       = document.getElementById('connectionForm');
+  const form = document.getElementById('connectionForm');
   const resultsDiv = document.getElementById('results');
-  const loaderObj  = document.getElementById('linkIcon');
+  const loaderObj = document.getElementById('linkIcon');
 
   // === MOCK SETUP ===
-  const useMock = true;  // toggle to false to hit real API
+  const useMock = true; // toggle to false to hit real API
   const mockPath = [
     {
       from: 'Kendrick Lamar',
@@ -46,12 +46,37 @@ document.addEventListener('DOMContentLoaded', () => {
       .trim();
   }
 
+  function setupTiltEffect() {
+    const images = document.querySelectorAll('.song-card img.cover-art');
+    const tiltAmount = 20; // Adjust this value for more or less tilt
+
+    images.forEach(img => {
+      img.addEventListener('mousemove', e => {
+        const rect = img.getBoundingClientRect();
+        const x = e.clientX - rect.left; // x position within the element.
+        const y = e.clientY - rect.top; // y position within the element.
+
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+
+        const tiltY = ((x - centerX) / centerX) * tiltAmount;
+        const tiltX = -((y - centerY) / centerY) * tiltAmount;
+
+        img.style.transform = `rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+      });
+
+      img.addEventListener('mouseleave', () => {
+        img.style.transform = `rotateX(0deg) rotateY(0deg)`;
+      });
+    });
+  }
+
   function renderResults(path) {
-    let html = '<h2>Connection Path</h2><div class="path-container">';
+    let html = '<h2>Path</h2><div class="path-container">';
 
     path.forEach(({ from, to, track, image, spotify, youtube, apple }, index) => {
       const cleanedTrack = cleanTrackTitle(track);
-      const imgSrc       = image || '/static/images/default_cover.png';
+      const imgSrc = image || '/static/images/default_cover.jpeg';
 
       html += `
         <div class="card-wrapper">
@@ -128,11 +153,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const shareBtn = document.getElementById('shareBtn');
     if (shareBtn) {
       shareBtn.addEventListener('click', () => {
-        // Replace with your actual share path or URL
-        const sharePath = window.location.href; // or some custom URL
+        // Get the artist names from the input fields
+        const artist1 = document.getElementById('artist1').value.trim();
+        const artist2 = document.getElementById('artist2').value.trim();
+
+        // Create a dynamic title
+        const shareTitle = `What connects ${artist1} to ${artist2}?`;
+        
+        // Use a fallback URL if a path isn't generated yet
+        const sharePath = window.location.href;
+        
         if (navigator.share) {
           navigator.share({
-            title: 'Check out this connection!',
+            title: shareTitle,
             url: sharePath
           }).catch(console.error);
         } else {
@@ -149,6 +182,9 @@ document.addEventListener('DOMContentLoaded', () => {
       behavior: 'smooth',
       block: 'start'
     });
+
+    // Setup the new tilt effect
+    setupTiltEffect();
   }
 
   // === LOADER SETUP ===
@@ -167,6 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const svgDoc = loaderObj && loaderObj.contentDocument;
       if (svgDoc) svgDoc.documentElement.unpauseAnimations();
+      
     } catch (err) {}
   }
   function stopLoader() {
@@ -189,9 +226,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // === AUTOCOMPLETE ===
   function setupAutocomplete(inputId) {
-    const input    = document.getElementById(inputId);
+    const input = document.getElementById(inputId);
     if (!input) return;
-    const wrapper  = input.parentElement;
+    const wrapper = input.parentElement;
     const dropdown = document.createElement('div');
     dropdown.className = 'autocomplete-dropdown';
     dropdown.style.display = 'none';
@@ -247,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
             item.addEventListener('mousedown', e => {
               e.preventDefault(); // Prevent focus loss before selection
               const name = item.dataset.name;
-              const img  = item.dataset.img;
+              const img = item.dataset.img;
               input.value = name;
               dropdown.style.display = 'none';
               const imgEl2 = selectedImages[inputId];
@@ -283,7 +320,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       items.forEach((it, i) => it.classList.toggle('highlighted', i === selectedIndex));
       const el = items[selectedIndex];
-      if (el) el.scrollIntoView({ block: 'nearest' });
+      if (el) el.scrollIntoView({
+        block: 'nearest'
+      });
     });
 
     // Delay hiding to allow click/mousedown to process first
@@ -306,9 +345,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const img1Vis = selectedImages.artist1 && selectedImages.artist1.style.display === 'block';
       const img2Vis = selectedImages.artist2 && selectedImages.artist2.style.display === 'block';
       let invalid = false;
-      if (!img1Vis) { shakeElement(form.artist1); invalid = true; }
-      if (!img2Vis) { shakeElement(form.artist2); invalid = true; }
-      if (invalid) { stopLoader(); return; }
+      if (!img1Vis) {
+        shakeElement(form.artist1);
+        invalid = true;
+      }
+      if (!img2Vis) {
+        shakeElement(form.artist2);
+        invalid = true;
+      }
+      if (invalid) {
+        stopLoader();
+        return;
+      }
 
       if (useMock) {
         renderResults(mockPath);
@@ -319,7 +367,9 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const resp = await fetch('/connect', {
           method: 'POST',
-          headers: {'Content-Type':'application/json'},
+          headers: {
+            'Content-Type': 'application/json'
+          },
           body: JSON.stringify({
             artist1: form.artist1 ? form.artist1.value.trim() : '',
             artist2: form.artist2 ? form.artist2.value.trim() : ''

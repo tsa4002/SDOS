@@ -3,6 +3,12 @@ h1 {
   margin-bottom: 1rem;
 }
 
+#results h2 {
+    text-align: center;
+    margin-top: -1rem;   /* Space above the heading */
+    margin-bottom: 1.5rem; /* Space between heading and first track card */
+}
+
 .path-container {
   display: flex;
   flex-direction: column;  /* stack vertically */
@@ -26,19 +32,23 @@ h1 {
 .song-card {
   width: 180px;
   height: 180px;
-  background-color: #f0f0f0;
+  background-color: transparent;
   border-radius: 8px;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;  /* enable absolute children */
+  position: relative;
+  /* New styles for 3D effect */
+  perspective: 1000px; /* Establishes a 3D space for the tilt */
 }
 
 .cover-art {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* New styles for smooth animation */
+  transition: transform 0.2s ease-out; /* Makes the tilt smooth */
 }
 
 /* Streaming icons below each card */
@@ -68,40 +78,6 @@ h1 {
   line-height: 1.2;
 }
 
-.play-btn {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 48px;
-  height: 48px;
-  padding: 0;
-  border: 2px solid rgba(255,255,255,0.9);
-  border-radius: 50%;
-  background: rgba(0,0,0,0.4);
-  transform: translate(-50%, -50%);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s ease, transform 0.2s ease;
-}
-
-.play-btn:hover {
-  background: rgba(0,0,0,0.6);
-  transform: translate(-50%, -50%) scale(1.1);
-}
-
-.play-icon {
-  width: 24px;
-  height: 24px;
-}
-
-/* Indicate playing state */
-.play-btn.playing {
-  border-color: #1db954;
-  background: rgba(29,185,84,0.8);
-}
-
 .path-container .card-wrapper:first-child {
   margin-top: 20px; /* adjust the value as needed */
 }
@@ -128,11 +104,11 @@ h1 {
 
 /* Footer container */
 footer {
-  margin-top: 2rem;
-  max-width: 900px;
-  margin-left: auto;
-  margin-right: auto;
-  padding: 0 20px;
+    margin-top: 1.5rem;  /* Space between last track card and footer */
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0 20px;
 }
 
 /* Flex container for the three footer buttons */
@@ -145,7 +121,7 @@ footer {
 
 /* Common styles for all footer buttons */
 .footer-buttons button {
-  background-color: #1db954;
+  background-color: #9362dd;
   border: none;
   border-radius: 8px;
   color: #fff;
@@ -160,7 +136,7 @@ footer {
 
 /* Hover effect for all footer buttons */
 .footer-buttons button:hover {
-  background-color: #17a74a;
+  background-color: #b585fd;
   transform: scale(1.05);
 }
 
@@ -178,7 +154,7 @@ footer {
 
 .footer-buttons button#refreshBtn:hover,
 .footer-buttons button#shareBtn:hover {
-  background-color: rgba(29, 185, 84, 0.15);
+  background-color: rgba(255, 255, 255, 0.15);
 }
 
 /* Center the Try Another Route button */

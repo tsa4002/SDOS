@@ -79,7 +79,6 @@ def select_artist(name):
         return None
 
 
-
 def get_artist_albums(artist_id):
     albums, seen = [], set()
     results = spotify_call(
@@ -187,7 +186,7 @@ def auto_select_artist(name):
     if not artists:
         return None
     artists.sort(key=lambda a: a.get("popularity", 0), reverse=True)
-    return artists[0] 
+    return artists[0]
 
 # --- Main Execution ---
 if __name__ == "__main__":
@@ -253,12 +252,11 @@ def find_path(start_name, end_name):
                 track_obj   = items[0]
                 image       = track_obj["album"]["images"][0]["url"] if track_obj["album"]["images"] else None
                 spotify_url = track_obj["external_urls"].get("spotify")
-                preview_url = track_obj.get("preview_url")  # <-- NEW
             else:
-                image, spotify_url, preview_url = (None, None, None)
+                image, spotify_url = (None, None)
         except Exception as e:
             print(f"Could not fetch data for track '{track}': {e}")
-            image, spotify_url, preview_url = (None, None, None)
+            image, spotify_url = (None, None)
 
         # fallback search URLs
         yt_query    = f"{track} {from_name} {to_name}".replace(" ", "+")
@@ -276,7 +274,6 @@ def find_path(start_name, end_name):
             "spotify"    : spotify_url,
             "youtube"    : youtube_url,
             "apple"      : apple_url,
-            "preview"    : preview_url   # <-- NEW
         })
 
     return result

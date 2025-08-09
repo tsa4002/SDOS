@@ -38,23 +38,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // Clean up raw track name
   function cleanTrackTitle(title) {
     return String(title || '')
-      // 1) Remove all parentheses and whatever is inside them
       .replace(/\([^)]*\)/g, '')
-      // 2) Remove "feat", "ft" or "featuring" (case-insensitive) and anything that follows
       .replace(/\b(?:feat\.?|ft\.?|featuring)\b.*$/i, '')
-      // 3) Trim leftover whitespace
       .trim();
   }
 
   function setupTiltEffect() {
     const images = document.querySelectorAll('.song-card img.cover-art');
-    const tiltAmount = 20; // Adjust this value for more or less tilt
+    const tiltAmount = 10;
 
     images.forEach(img => {
       img.addEventListener('mousemove', e => {
         const rect = img.getBoundingClientRect();
-        const x = e.clientX - rect.left; // x position within the element.
-        const y = e.clientY - rect.top; // y position within the element.
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
@@ -72,11 +69,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderResults(path) {
-    let html = '<h2>Path</h2><div class="path-container">';
+    let html = '<h2>Connection Path</h2><div class="path-container">';
 
     path.forEach(({ from, to, track, image, spotify, youtube, apple }, index) => {
       const cleanedTrack = cleanTrackTitle(track);
-      const imgSrc = image || '/static/images/default_cover.jpeg';
+      const imgSrc = image || '/static/images/default_cover.png';
 
       html += `
         <div class="card-wrapper">
@@ -105,7 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     });
 
-    // Add footer with three buttons: refresh (left), try again (center), share (right)
     html += `
       </div>
       <footer>
@@ -123,7 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     resultsDiv.innerHTML = html;
 
-    // Button event listeners
     const refreshBtn = document.getElementById('refreshBtn');
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => {
@@ -153,14 +148,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const shareBtn = document.getElementById('shareBtn');
     if (shareBtn) {
       shareBtn.addEventListener('click', () => {
-        // Get the artist names from the input fields
         const artist1 = document.getElementById('artist1').value.trim();
         const artist2 = document.getElementById('artist2').value.trim();
-
-        // Create a dynamic title
-        const shareTitle = `What connects ${artist1} to ${artist2}?`;
-        
-        // Use a fallback URL if a path isn't generated yet
+        const shareTitle = `What connects ${artist1} with ${artist2}?`;
         const sharePath = window.location.href;
         
         if (navigator.share) {
@@ -169,7 +159,6 @@ document.addEventListener('DOMContentLoaded', () => {
             url: sharePath
           }).catch(console.error);
         } else {
-          // fallback: copy URL to clipboard and alert user
           navigator.clipboard.writeText(sharePath).then(() => {
             alert('Link copied to clipboard!');
           });
@@ -177,13 +166,11 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Scroll to results after rendering
     resultsDiv.scrollIntoView({
       behavior: 'smooth',
       block: 'start'
     });
 
-    // Setup the new tilt effect
     setupTiltEffect();
   }
 
@@ -193,9 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const svgDoc = loaderObj.contentDocument;
         if (svgDoc) svgDoc.documentElement.pauseAnimations();
-      } catch (err) {
-        // ignore if not an SVG or cross-origin
-      }
+      } catch (err) {}
     });
   }
 
@@ -203,9 +188,9 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const svgDoc = loaderObj && loaderObj.contentDocument;
       if (svgDoc) svgDoc.documentElement.unpauseAnimations();
-      
     } catch (err) {}
   }
+
   function stopLoader() {
     try {
       const svgDoc = loaderObj && loaderObj.contentDocument;
@@ -231,11 +216,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const wrapper = input.parentElement;
     const dropdown = document.createElement('div');
     dropdown.className = 'autocomplete-dropdown';
-    dropdown.style.display = 'none';
     wrapper.appendChild(dropdown);
 
     let debounceTimeout = null;
     let selectedIndex = -1;
+
+    function openDropdown() {
+      dropdown.classList.add('is-open');
+    }
+
+    function closeDropdown() {
+      dropdown.classList.remove('is-open');
+    }
 
     input.addEventListener('input', () => {
       stopLoader();
@@ -250,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const q = input.value.trim();
         if (!q) {
           dropdown.innerHTML = '';
-          dropdown.style.display = 'none';
+          closeDropdown();
           selectedIndex = -1;
           return;
         }
@@ -274,19 +266,18 @@ document.addEventListener('DOMContentLoaded', () => {
               `;
             }).join('');
           }
-
-          dropdown.style.display = 'block';
+          openDropdown();
           selectedIndex = -1;
 
           // Use mousedown to register before blur hides the dropdown
           dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
             if (item.classList.contains('no-results')) return;
             item.addEventListener('mousedown', e => {
-              e.preventDefault(); // Prevent focus loss before selection
+              e.preventDefault();
               const name = item.dataset.name;
               const img = item.dataset.img;
               input.value = name;
-              dropdown.style.display = 'none';
+              closeDropdown();
               const imgEl2 = selectedImages[inputId];
               if (imgEl2) {
                 imgEl2.src = img;
@@ -296,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         } catch (err) {
           dropdown.innerHTML = '<div class="autocomplete-item no-results">Error loading results</div>';
-          dropdown.style.display = 'block';
+          openDropdown();
           selectedIndex = -1;
         }
       }, 300);
@@ -325,10 +316,9 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    // Delay hiding to allow click/mousedown to process first
     input.addEventListener('blur', () => {
       setTimeout(() => {
-        dropdown.style.display = 'none';
+        closeDropdown();
       }, 150);
     });
   }

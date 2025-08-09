@@ -1,23 +1,31 @@
+/* --- Global & Base Styles --- */
+body {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
 h1 {
   text-align: center;
   margin-bottom: 1rem;
 }
 
-#results h2 {
-    text-align: center;
-    margin-top: -1rem;   /* Space above the heading */
-    margin-bottom: 1.5rem; /* Space between heading and first track card */
+h2 {
+  text-align: center;
+  margin-top: -1rem;
+  margin-bottom: 1.5rem;
 }
 
+/* --- Results Path Layout --- */
 .path-container {
   display: flex;
-  flex-direction: column;  /* stack vertically */
-  gap: 42px;               /* vertical gap between cards */
+  flex-direction: column;
+  gap: 42px;
   padding: 0 20px 20px;
   justify-content: flex-start;
   max-width: 900px;
   margin: 0 auto;
-  align-items: center; /* center cards horizontally */
+  align-items: center;
 }
 
 .card-wrapper {
@@ -25,10 +33,30 @@ h1 {
   flex-direction: column;
   align-items: center;
   width: 180px;
-  position: relative; /* for step number */
+  position: relative;
 }
 
-/* Just the cover art square */
+.step-number {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: black;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: 2px solid black;
+  box-shadow: none;
+  user-select: none;
+}
+
+/* --- Track Cover Art & Links --- */
 .song-card {
   width: 180px;
   height: 180px;
@@ -39,19 +67,16 @@ h1 {
   align-items: center;
   justify-content: center;
   position: relative;
-  /* New styles for 3D effect */
-  perspective: 1000px; /* Establishes a 3D space for the tilt */
+  perspective: 1000px;
 }
 
 .cover-art {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  /* New styles for smooth animation */
-  transition: transform 0.2s ease-out; /* Makes the tilt smooth */
+  transition: transform 0.2s ease-out;
 }
 
-/* Streaming icons below each card */
 .links {
   display: flex;
   gap: 8px;
@@ -69,7 +94,6 @@ h1 {
   opacity: 1;
 }
 
-/* Song title and artist info */
 .info {
   text-align: center;
   font-size: 0.85rem;
@@ -78,40 +102,15 @@ h1 {
   line-height: 1.2;
 }
 
-.path-container .card-wrapper:first-child {
-  margin-top: 20px; /* adjust the value as needed */
-}
-
-.step-number {
-  position: absolute;
-  top: -24px;       /* above the cover art */
-  left: 50%;        /* center horizontally */
-  transform: translateX(-50%);
-  color: black;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  font-size: 14px;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: transparent;   /* no fill */
-  border: 2px solid black;         /* outline circle */
-  box-shadow: none;                /* remove shadow */
-  user-select: none;
-}
-
-/* Footer container */
+/* --- Footer & Buttons --- */
 footer {
-    margin-top: 1.5rem;  /* Space between last track card and footer */
-    max-width: 900px;
-    margin-left: auto;
-    margin-right: auto;
-    padding: 0 20px;
+  margin-top: 1.5rem;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 20px;
 }
 
-/* Flex container for the three footer buttons */
 .footer-buttons {
   display: flex;
   justify-content: space-between;
@@ -119,7 +118,6 @@ footer {
   gap: 1rem;
 }
 
-/* Common styles for all footer buttons */
 .footer-buttons button {
   background-color: #9362dd;
   border: none;
@@ -134,13 +132,11 @@ footer {
   transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
-/* Hover effect for all footer buttons */
 .footer-buttons button:hover {
   background-color: #b585fd;
   transform: scale(1.05);
 }
 
-/* Smaller, circular icon buttons */
 .footer-buttons button#refreshBtn,
 .footer-buttons button#shareBtn {
   padding: 10px;
@@ -157,17 +153,30 @@ footer {
   background-color: rgba(255, 255, 255, 0.15);
 }
 
-/* Center the Try Another Route button */
 .footer-buttons #tryAgainBtn {
   min-width: 160px;
   margin: 0 auto;
   flex-shrink: 0;
 }
 
-/* Icon images inside footer buttons */
 .footer-buttons button img {
   width: 20px;
   height: 20px;
   pointer-events: none;
   user-select: none;
+}
+
+/* --- Autocomplete Dropdown --- */
+.autocomplete-dropdown {
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+.autocomplete-dropdown.is-open {
+  max-height: 250px;
+  opacity: 1;
+  pointer-events: auto;
 }

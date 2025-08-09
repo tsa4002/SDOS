@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     {
       from: 'Kendrick Lamar',
       to: 'Schoolboy Q',
-      track: 'Collabo Track 1 (feat. Jay Rock)',
+      track: 'Collab Track 1 (feat. Jay Rock)',
       image: null,
       spotify: '#',
       youtube: '#',
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     path.forEach(({ from, to, track, image, spotify, youtube, apple }, index) => {
       const cleanedTrack = cleanTrackTitle(track);
-      const imgSrc = image || '/static/images/default_cover.png';
+      const imgSrc = image || '/static/images/default_cover.jpeg';
 
       html += `
         <div class="card-wrapper">

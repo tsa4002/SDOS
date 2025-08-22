@@ -1,0 +1,256 @@
+/* --- Global & Base Styles --- */
+body {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+h2 {
+  text-align: center;
+  margin-top: -1rem;
+  margin-bottom: 2rem;
+}
+
+/* --- Results Path Layout --- */
+.path-container {
+  display: flex;
+  flex-direction: column;
+  gap: 42px;
+  /* Changed padding to remove the extra space at the bottom */
+  padding: 0 20px 0;
+  justify-content: flex-start;
+  max-width: 900px;
+  margin: 0 auto;
+  align-items: center;
+}
+
+.card-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 180px;
+  position: relative;
+}
+
+.step-number {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: black;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: 2px solid black;
+  box-shadow: none;
+  user-select: none;
+}
+
+/* --- Track Cover Art & Links (Corrected) --- */
+.song-card {
+  width: 180px;
+  height: 180px;
+  background-color: transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative; /* CRITICAL: Establishes a positioning context for the play button */
+  /* Reverted to original styles to allow the image to take up full space. */
+}
+
+.cover-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease-out;
+}
+
+.links {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.links img {
+  width: 20px;
+  height: 20px;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.links a:hover img {
+  opacity: 1;
+}
+
+.info {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #333;
+  margin-top: 6px;
+  line-height: 1.2;
+}
+
+/* --- Footer & Buttons --- */
+footer {
+  margin-top: 2rem;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 20px;
+}
+
+.footer-buttons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.footer-buttons button {
+  background-color: #9362dd;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  outline: none;
+  box-shadow: none;
+}
+
+.footer-buttons button:hover {
+  background-color: #7536D3;
+  transform: translateY(-2px);
+  outline: none;
+  box-shadow: none;
+}
+
+.footer-buttons button#refreshBtn,
+.footer-buttons button#shareBtn {
+  padding: 10px;
+  width: 44px;
+  height: 44px;
+  background-color: transparent;
+  border-radius: 50%;
+  color: inherit;
+  transition: background-color 0.3s ease;
+  outline: none;
+  box-shadow: none;
+}
+
+.footer-buttons button#refreshBtn:hover,
+.footer-buttons button#shareBtn:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  outline: none;
+  box-shadow: none;
+}
+
+.footer-buttons #tryAgainBtn {
+  min-width: 160px;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
+.footer-buttons button img {
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* --- New Styles for Play Button Container and Progress Circle --- */
+
+.play-button-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.progress-circle {
+  --progress: 0%;
+  position: absolute;
+  top: 50;
+  left: 50;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: conic-gradient(
+    rgba(255, 255, 255, 0.73) var(--progress),
+    transparent var(--progress)
+  );
+  opacity: 0;
+  transform: scale(0);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.progress-circle.is-playing {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.play-button {
+  position: relative;
+  z-index: 11;
+  background-color: rgba(255, 255, 255, 0.353);
+  border-radius: 50%;
+  border: none;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 1;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  outline: none;
+  box-shadow: none;
+}
+
+.play-button:hover {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.play-button.is-playing {
+  background-color: rgba(255, 255, 255, 0.225);
+}
+
+.play-button .play-icon {
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
+}
+
+/* --- Autocomplete Dropdown --- */
+.autocomplete-dropdown {
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+.autocomplete-dropdown.is-open {
+  max-height: 250px;
+  opacity: 1;
+  pointer-events: auto;
+}

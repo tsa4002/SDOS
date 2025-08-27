@@ -1,5 +1,6 @@
 # Raw database dumps
 data/
+*.nixpacks
 *.tar.bz2
 *.sql
 *.7z

@@ -4,3 +4,5 @@ uvicorn[standard]
 requests
 pyjwt
 cryptography
+pydantic
+python-multipart

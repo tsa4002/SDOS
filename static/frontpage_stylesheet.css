@@ -1,39 +1,47 @@
-/* Full CSS (updated relevant sections for centered overlay + scroll fix) */
+/* ============================================================================
+   SDOS CSS — organized & commented
+   - Reset + layout
+   - Inputs & buttons
+   - Results / path / step layout
+   - Track cover, overlayed centered play/pause + progress ring
+   - Autocomplete dropdown
+   - Footer / misc
+   ============================================================================ */
 
-/* Box sizing reset for consistent sizing */
+/* ---------------------------
+   RESET / CORE
+   --------------------------- */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
-/* Core layout for full viewport without horizontal scroll */
 html, body {
   height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;   /* allow vertical scrolling when content grows */
   margin: 0;
   padding: 0;
+  overflow-x: hidden;   /* prevent horizontal scroll */
+  overflow-y: auto;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  background-color: #fff;
+  color: #111;
 }
 
-/* Main page wrapper */
+/* Page wrapper */
 .page {
-  font-family: 'Inter', sans-serif;
-  background-color: #ffffff;
-  color: #111;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  align-items: center;       /* center horizontally */
-  justify-content: center;   /* center vertically when content is short */
-  min-height: 100vh;         /* ensures vertical centering for short pages */
+  align-items: center;     /* center horizontally */
+  justify-content: center; /* center vertically when short */
   padding: 20px;
-  background-repeat: no-repeat;
-  background-size: cover;
   width: 100%;
-  box-sizing: border-box;
 }
 
-/* Typography */
+/* ---------------------------
+   TYPOGRAPHY
+   --------------------------- */
 h1 {
   font-size: 2.5rem;
   margin-bottom: 0.5rem;
@@ -41,7 +49,6 @@ h1 {
   background: linear-gradient(to right, #52aaed, #e14141);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  color: transparent;
 }
 
 p {
@@ -51,365 +58,43 @@ p {
   color: #555;
 }
 
-/* Input Section */
+/* ---------------------------
+   INPUTS / AUTOCOMPLETE
+   --------------------------- */
 .input-container {
   display: flex;
-  align-items: center;
   gap: 30px;
+  align-items: center;
   justify-content: center;
-  margin-bottom: 1.5rem;
   flex-wrap: wrap;
+  margin-bottom: 1.5rem;
 }
 
 .input-wrapper {
   position: relative;
-  flex: 1;              /* allow input wrapper to grow */
-  min-width: 200px;     /* prevent it from getting too small */
-  max-width: 400px;     /* optional upper limit */
+  flex: 1;
+  min-width: 200px;
+  max-width: 400px;
 }
 
-input {
-  width: 100%;          /* fill the wrapper's space */
+input[type="text"], input[type="search"], textarea {
+  width: 100%;
   padding: 12px 25px;
   font-size: 1rem;
   border-radius: 12px;
   border: 1px solid #ccc;
-  text-align: center;
   background-color: #f9f9f9;
-  transition: box-shadow 0.3s ease, transform 0.2s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  text-align: center;
+  transition: box-shadow 0.25s ease, transform 0.12s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
 }
 
-input::placeholder {
-  text-align: center;
-  color: #999;
-}
+input::placeholder { color: #999; text-align: center; }
 
 input:focus {
   outline: none;
-  box-shadow: 0 0 0 3px #90C8F3;
-  transform: scale(1.03);
-}
-
-/* Buttons */
-.button-container {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 2rem;
-  width: 100%;
-}
-
-button {
-  padding: 12px 30px;
-  font-size: 1rem;
-  border: none;
-  border-radius: 10px;
-  background-color: #9362dd;
-  color: white;
-  cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-  outline: none;
-  box-shadow: none;
-}
-
-button:hover {
-  background-color: #7536D3;
-  transform: translateY(-2px);
-  outline: none;
-  box-shadow: none;
-}
-
-/* Results */
-#results {
-  margin-top: 20px;
-  text-align: center;
-  color: #222;
-  width: 100%;
-  max-width: 600px;
-}
-
-/* Results header styling */
-.results-header {
-  margin-bottom: 20px;
-  font-size: 1.1rem;
-  color: #555;
-  font-weight: 500;
-}
-
-/* Path container - FIXED: Proper centering for all children */
-.path-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;  /* This centers all children horizontally */
-  gap: 20px;
-  padding: 10px;
-  width: 100%;
-}
-
-/* Individual connection step - FIXED: Removed duplicate centering */
-.connection-step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px 0;
-  width: 100%;
-  max-width: 400px;  /* Constrain width for better layout */
-}
-
-/* TRACK COVER WRAPPER - NEW: positioned ancestor for overlay */
-.track-cover-wrapper {
-  position: relative;           /* important: contains absolute overlay */
-  width: 200px;
-  height: 200px;
-  margin: 0 auto 15px auto;     /* center the wrapper */
-  display: block;
-}
-
-/* Track cover image - fills the wrapper */
-.track-cover {
-  width: 100%;
-  height: 100%;
-  border-radius: 12px;
-  object-fit: cover;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: block;
-}
-
-/* Placeholder shown when no cover available */
-.track-cover-placeholder {
-  width: 100%;
-  height: 100%;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  font-size: 48px;
-}
-
-/* When actual image loads, remove the gradient background (optional class) */
-.track-cover.has-image {
-  background: none;
-  color: transparent;
-}
-
-/* Step number indicator - FIXED: Properly centered */
-.step-number {
-  background: #9362dd;
-  color: white;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.9rem;
-  font-weight: bold;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-  margin: 0 auto 15px auto;  /* Center horizontally */
-  flex-shrink: 0;
-}
-
-/* Track name - FIXED: Proper spacing and centering */
-.track-name {
-  font-size: 1rem;
-  color: #666;
-  font-style: italic;
-  text-align: center;
-  line-height: 1.4;
-  margin-bottom: 8px;
-  width: 100%;
-}
-
-/* Artist names - FIXED: Proper spacing */
-.artist-names {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 15px;
-  text-align: center;
-  width: 100%;
-}
-
-/* Music service icons - FIXED: Proper centering */
-.music-services {
-  display: flex;
-  gap: 15px;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  margin-top: 0;  /* Remove extra margin */
-}
-
-.service-icon {
-  width: 32px;
-  height: 32px;
-  cursor: pointer;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-  border-radius: 6px;
-  padding: 4px;
-  flex-shrink: 0;
-}
-
-.service-icon:hover {
-  transform: scale(1.1);
-  opacity: 0.8;
-}
-
-.service-icon.spotify {
-  background-color: #1DB954;
-}
-
-.service-icon.youtube {
-  background-color: #FF0000;
-}
-
-.service-icon.apple {
-  background-color: #000000;
-}
-
-/* Footer & Buttons (updated) */
-footer {
-  margin-top: 2rem;
-  max-width: 900px;
-  margin-left: auto;
-  margin-right: auto;
-  padding: 0 20px;
-}
-
-/* Keep items centered but use gap to space them tightly */
-.footer-buttons {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;              /* tighten spacing between buttons */
-  flex-wrap: nowrap;
-}
-
-/* Default button look for the footer */
-.footer-buttons button {
-  background-color: #9362dd;
-  border: none;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 1rem;
-  cursor: pointer;
-  padding: 10px 18px;   /* slightly reduced padding so the row is tighter */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-  outline: none;
-  box-shadow: none;
-}
-
-/* icon buttons (refresh/share) — make them compact circles */
-.footer-buttons button#refreshBtn,
-.footer-buttons button#shareBtn {
-  padding: 8px;           /* smaller clickable area but still usable */
-  width: 44px;
-  height: 44px;
-  background-color: transparent;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* hover styles for icon buttons */
-.footer-buttons button#refreshBtn:hover,
-.footer-buttons button#shareBtn:hover {
-  background-color: rgba(255, 255, 255, 0.12);
-}
-
-/* Try again (primary) button — no auto margin so it sits next to icons */
-.footer-buttons #tryAgainBtn {
-  min-width: 150px;      /* comfortable button width */
-  margin: 0;             /* REMOVE margin: 0 auto; */
-  flex-shrink: 0;
-  order: 2;              /* middle button */
-}
-
-/* Ensure icon buttons flank the Try button */
-.footer-buttons button#refreshBtn { order: 1; } /* left */
-.footer-buttons button#shareBtn    { order: 3; } /* right */
-
-/* small icon in buttons */
-.footer-buttons button img {
-  width: 18px;
-  height: 18px;
-  pointer-events: none;
-  user-select: none;
-}
-
-/* Responsive: stack on narrow displays */
-@media (max-width: 520px) {
-  .footer-buttons {
-    gap: 10px;
-    flex-direction: column;
-  }
-  .footer-buttons button#refreshBtn,
-  .footer-buttons button#shareBtn {
-    width: 48px;
-    height: 48px;
-  }
-  .footer-buttons #tryAgainBtn {
-    width: 100%;
-    min-width: 0;
-    order: 1;
-  }
-  .footer-buttons button#refreshBtn { order: 2; }
-  .footer-buttons button#shareBtn    { order: 3; }
-}
-
-/* Hide utility */
-.hidden {
-  display: none;
-}
-
-/* Selected artist layout */
-.selected-artist {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  position: relative;
-}
-
-.selected-artist img {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-/* Artist 1 image on the left */
-#selected-artist1-img {
-  position: absolute;
-  left: -60px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: none;
-}
-
-/* Artist 2 image on the right */
-#selected-artist2-img {
-  position: absolute;
-  right: -60px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: none;
-}
-
-/* Flip layout for artist 2 */
-.input-wrapper.artist2 .selected-artist {
-  flex-direction: row-reverse;
-  gap: 8px;
-}
-
-.input-wrapper.artist2 input {
-  padding: 12px;
+  box-shadow: 0 0 0 3px rgba(144,200,243,0.35);
+  transform: scale(1.02);
 }
 
 /* Autocomplete dropdown */
@@ -418,13 +103,12 @@ footer {
   top: calc(100% + 6px);
   left: 0;
   right: 0;
-  background: white;
+  background: #fff;
   border-radius: 8px;
   max-height: 250px;
   overflow-y: auto;
-  z-index: 10;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  list-style: none;
+  z-index: 50;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
   padding: 0;
   margin: 0;
 }
@@ -435,168 +119,333 @@ footer {
   gap: 10px;
   padding: 12px 15px;
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-/* Unified style for both mouse hover and keyboard navigation */
 .autocomplete-item:hover,
 .autocomplete-item.highlighted {
-  background-color: #bf99f8;
-  color: white;
+  background-color: #7f5de7; /* purple-ish highlight */
+  color: #fff;
 }
 
-.artist-info {
+.artist-info { display:flex; flex-direction:column; gap:2px; width:100%; }
+.artist-name { font-size:1rem; font-weight:500; }
+.artist-details { font-size:0.85rem;}
+.artist-mbid { font-size:0.75rem; color:#999; font-family:monospace; word-break:break-all; }
+
+/* ---------------------------
+   BUTTONS
+   --------------------------- */
+.button-container { display:flex; justify-content:center; margin-bottom:2rem; width:100%; }
+
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 10px;
+  background: #9362dd;
+  color: #fff;
+  padding: 12px 30px;
+  font-size: 1rem;
+  transition: transform 0.12s ease, background-color 0.2s ease;
+}
+
+button:hover { transform: translateY(-2px); background: #7536D3; }
+
+/* ---------------------------
+   RESULTS / PATH LAYOUT
+   --------------------------- */
+#results {
+  width: 100%;
+  max-width: 640px;
+  margin-top: 20px;
+  text-align: center;
+  color: #222;
+}
+
+/* Path container & individual steps */
+.path-container {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 50px;
+  align-items: center;
+  padding: 10px;
   width: 100%;
 }
 
-.artist-name {
-  font-size: 1rem;
-  font-weight: 500;
-  color: inherit;
+/* Make connection-step a positioned ancestor so absolute children position reliably */
+.connection-step {
+  position: relative;
 }
 
-.artist-details {
-  font-size: 0.85rem;
-  color: #666;
-}
-
-.autocomplete-item:hover .artist-details,
-.autocomplete-item.highlighted .artist-details {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.artist-mbid {
-  font-size: 0.75rem;
-  color: #999;
-  font-family: monospace;
-  word-break: break-all;
-  white-space: normal;
-}
-
-.autocomplete-item:hover .artist-mbid,
-.autocomplete-item.highlighted .artist-mbid {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.link-icon {
+.step-number {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: black;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100px;
-  height: 60px;
-  transform: translateY(-5px);
-  flex-shrink: 0;
+  background-color: transparent;
+  border: 2px solid black;
+  box-shadow: none;
+  user-select: none;
 }
 
-.static-icon {
-  width: 80px;
-  height: 40px;
-  pointer-events: none;
+/* Track name & artist */
+.track-name { font-size:1rem; color:#666; font-style:italic; margin-bottom:8px; text-align:center; }
+.artist-names { font-size:1.05rem; font-weight:600; color:#333; text-align:center; margin-bottom:8px; }
+
+/* ---------------------------
+   TRACK COVER + OVERLAY
+   --------------------------- */
+
+/* Wrapper containing image + overlay */
+.track-cover-wrapper {
+  position: relative;              /* anchors the overlay */
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 12px auto;
+  display: block;
+  border-radius: 12px;
+  overflow: visible;               /* allow overlay ring to sit outside a bit */
 }
 
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-6px); }
-  40%, 80% { transform: translateX(6px); }
+/* Image itself — neutral background while loading */
+.track-cover {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  background-color: #f3f4f6; /* neutral pale while image loads */
 }
 
-input.shake {
-  animation: shake 0.4s ease;
-  position: relative;
-  border: 1px solid red;
+/* fallback placeholder element if you use it */
+.track-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e6e7ea;
+  color: #fff;
+  font-size: 48px;
 }
 
-/* -----------------------
-   PLAY BUTTON + PROGRESS
-   ----------------------- */
+/* Remove any previous gradient backgrounds that might have been applied */
+.track-cover, .track-cover-placeholder {
+  background-image: none !important;
+}
 
-/* Container sits over the cover but is constrained to wrapper */
+/* Play-button container sits absolute over the wrapper and centers content */
 .play-button-container {
   position: absolute;
-  inset: 0;                     /* top:0; right:0; bottom:0; left:0 */
-  z-index: 10;
+  inset: 0;                       /* top:0; right:0; bottom:0; left:0 */
   display: flex;
-  justify-content: center;
   align-items: center;
-  pointer-events: none;         /* let pointer-events pass through except the button itself */
+  justify-content: center;
+  z-index: 20;
+  pointer-events: none;           /* allow underlying layout to be interactive; button itself will get events */
 }
 
-/* progress ring centered behind the button */
+/* Make the actual button accept pointer events */
+.play-button-container .play-button {
+  pointer-events: auto;
+}
+
+/* Progress ring centered behind the button
+   - use min and calc so the ring size stays proportional and never too large
+   - display block so it's always rendered
+   - z-index sits behind the button but above the image */
+/* Progress ring centered behind the button
+   - Fixed positioning to ensure perfect centering
+   - Uses absolute pixel sizing instead of percentage for better control */
 .progress-circle {
   --progress: 0%;
   position: absolute;
-  width: 80%;
-  height: 80%;
+  display: block;
+  /* Use fixed size that works well with 200px wrapper */
+  width: 152px;
+  height: 152px;
   border-radius: 50%;
-  transform: translateZ(0);     /* avoid blurry transforms */
-  background: conic-gradient(
-    rgba(255, 255, 255, 0.73) var(--progress),
-    transparent var(--progress)
-  );
-  opacity: 0;
-  transform-origin: center;
-  transition: opacity 0.25s ease, transform 0.25s ease;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(0.9);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  /* Simplified transform - just center it */
+  transform: translate(-50%, -50%);
+  background: conic-gradient(rgba(255,255,255,0.73) var(--progress), transparent var(--progress));
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease, background 0.12s linear;
   pointer-events: none;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  z-index: 25;
+  will-change: transform, opacity;
+  transform: translate(-50%, -50%) scale(0);
 }
 
+/* visible state - keep the same centering transform */
 .progress-circle.is-playing {
   opacity: 1;
+  transform: translate(-50%, -50%);
   transform: translate(-50%, -50%) scale(1);
 }
 
-/* actual play button centered, but allow pointer events on it */
+/* Play button — circular, centered */
 .play-button {
-  pointer-events: auto;
   position: relative;
-  z-index: 11;
-  background-color: rgba(255, 255, 255, 0.85);
-  border-radius: 50%;
-  border: none;
+  z-index: 30;
   width: 56px;
   height: 56px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  opacity: 1;
+  border-radius: 50%;
+  border: none;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 8px 26px rgba(0,0,0,0.12);
   cursor: pointer;
-  transition: background-color 0.18s ease, transform 0.12s ease;
-  outline: none;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  transition: transform 0.12s ease, background-color 0.12s ease;
+  pointer-events: auto;
 }
 
-.play-button:hover {
-  transform: scale(1.04);
-  background-color: rgba(255,255,255,0.95);
-}
+.play-button:hover { transform: translateY(-3px); background: rgba(255,255,255,0.98); }
+.play-button.is-playing { background: rgba(255,255,255,0.78); transform: none; }
 
-.play-button.is-playing {
-  background-color: rgba(255, 255, 255, 0.75);
-}
-
-/* smaller icon inside the button */
+/* Icon inside button */
 .play-button .play-icon {
   width: 26px;
   height: 26px;
   pointer-events: none;
 }
 
-/* optional playing state on the step (CSS hook) */
-.connection-step.playing {
-  /* Example: slightly lift while playing */
-  transform: translateY(-2px);
-  transition: transform 0.18s ease;
+/* Optional playing state on connection step */
+.connection-step.playing { transform: translateY(-2px); transition: transform 0.12s ease; }
+
+/* Fade-in for steps (stagger applied by JS) */
+.connection-step.fade-step {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 560ms ease, transform 360ms cubic-bezier(.2,.9,.2,1);
+}
+.connection-step.fade-step.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-/* responsive smaller button on small screens */
-@media (max-width: 420px) {
+/* ---------------------------
+   MUSIC SERVICES ICONS
+   --------------------------- */
+.music-services {
+  display:flex;
+  gap:12px;
+  justify-content:center;
+  margin-top:8px;
+}
+
+.service-icon {
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 6px;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+.service-icon:hover { transform: scale(1.08); opacity: 0.9; }
+
+/* ---------------------------
+   FOOTER / ACTIONS
+   --------------------------- */
+footer {
+  margin-top: 2rem;
+  padding: 0 16px;
+  width: 100%;
+  max-width: 900px;
+}
+
+.footer-buttons {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.footer-buttons button {
+  background: #9362dd;
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 18px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.footer-buttons button#refreshBtn,
+.footer-buttons button#shareBtn {
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  padding: 8px;
+  border-radius: 50%;
+}
+.footer-buttons button img { width: 18px; height: 18px; pointer-events: none; }
+
+/* Try again primary style */
+.footer-buttons #tryAgainBtn {
+  min-width: 150px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* Responsive stacking on small screens */
+@media (max-width: 520px) {
   .track-cover-wrapper { width: 160px; height: 160px; }
   .play-button { width: 48px; height: 48px; }
-  .play-button .play-icon { width: 22px; height: 22px; }
-  .progress-circle { width: 86%; height: 86%; }
+  .play-button .play-icon { width: 20px; height: 20px; }
+  .progress-circle { width: min(calc(100% - 36px), 180px); height: min(calc(100% - 36px), 180px); }
+  .footer-buttons { flex-direction: column; gap: 12px; }
+  .footer-buttons #tryAgainBtn { width: 100%; }
+}
+
+/* ---------------------------
+   UTILITIES
+   --------------------------- */
+.hidden { display:none; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+input.shake { animation: shake 0.4s ease; border: 1px solid #d33; }
+
+/* ---------------------------
+   LOADING ANIMATION
+   --------------------------- */
+
+/* Default state - no animation */
+.link-icon {
+  transition: transform 0.2s ease;
+}
+
+/* Loading state - spinning animation */
+.link-icon.loading {
+  animation: spin 1s linear infinite;
+}
+
+/* Keyframe for spinning */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

@@ -15,5 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
+COPY data/processed/*.pkl data/processed/
+
 # Start the application
 CMD uvicorn app:app --host 0.0.0.0 --port $PORT

@@ -6,3 +6,4 @@ pyjwt
 cryptography
 pydantic
 python-multipart
+asyncpg

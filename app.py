@@ -1,7 +1,8 @@
-# app.py
+
+import os
 import time
-import threading
-from typing import Optional, List, Tuple, Iterable
+import sqlite3
+from typing import Optional, List
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import RedirectResponse, JSONResponse
@@ -9,26 +10,24 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-import requests  # pip install requests
-
-# local package modules (your existing scripts)
-from sdos.db import get_connection
-from sdos.graph import (
-    get_or_build_graph,
-    load_graph_from_cache,
-    load_artist_name_cache,
-    build_artist_name_cache,
-)
-# updated pathfinding import supports excluded edges
+from sdos.sqlite_graph import SQLiteGraph
 from sdos.pathfinding import bidirectional_bfs_with_tracks
-from sdos.search import search_artists
 
-app = FastAPI(title="SDOS — MusicBrainz Collaboration Pathfinder")
 
-# Mount static files (your HTML/CSS/JS/images)
+app = FastAPI(title="SDOS - MusicBrainz Collaboration Pathfinder")
+
+# Database paths
+SEARCH_DB_PATH = os.path.join(
+    "data", "processed", "artist_search.sqlite"
+)
+GRAPH_DB_PATH = os.path.join(
+    "data", "processed", "collaboration_graph.sqlite"
+)
+
+# Static frontend
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# allow CORS for development/frontend testing
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -36,156 +35,297 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global in-process caches (protected by lock)
+# Disk-backed graph. This does not load the entire graph into RAM.
 GRAPH = None
-ARTIST_CACHE = None  # dict: artist_id -> (name, gid)
-GRAPH_LOCK = threading.Lock()
 
-# Background loader to populate caches at startup (non-blocking)
-def _background_loader():
-    global GRAPH, ARTIST_CACHE
-    try:
-        # artist cache
-        ARTIST_CACHE = load_artist_name_cache()
-        if ARTIST_CACHE is None:
-            conn = get_connection()
-            try:
-                ARTIST_CACHE = build_artist_name_cache(conn)
-            finally:
-                conn.close()
 
-        # graph cache (load from pickle or build)
-        GRAPH = load_graph_from_cache()
-        if GRAPH is None:
-            # building can be expensive — do it here (background) and save cache
-            GRAPH = get_or_build_graph(conn=get_connection(), force_rebuild=False)
-    except Exception as e:
-        print("Background loader error:", e)
+# --------------------------------------------------
+# Startup
+# --------------------------------------------------
 
 @app.on_event("startup")
 def startup_event():
-    t = threading.Thread(target=_background_loader, daemon=True)
-    t.start()
+    global GRAPH
 
-# Models
+    if os.path.exists(GRAPH_DB_PATH):
+        GRAPH = SQLiteGraph(GRAPH_DB_PATH)
+        print(f"SQLite collaboration graph ready: {GRAPH_DB_PATH}")
+    else:
+        print(f"WARNING: Graph database not found: {GRAPH_DB_PATH}")
+
+    if os.path.exists(SEARCH_DB_PATH):
+        print(f"Artist search database ready: {SEARCH_DB_PATH}")
+    else:
+        print(f"WARNING: Search database not found: {SEARCH_DB_PATH}")
+
+
+# --------------------------------------------------
+# Request models
+# --------------------------------------------------
+
 class PathRequest(BaseModel):
     source_id: int
     target_id: int
     rebuild: Optional[bool] = False
-    # Optional exclusion list of edges to avoid: list of [a, b]
     exclude_edges: Optional[List[List[int]]] = None
 
-# Serve your pre-existing HTML (redirect to static index)
+
+# --------------------------------------------------
+# Pages and health
+# --------------------------------------------------
+
 @app.get("/", include_in_schema=False)
 def root_redirect():
     return RedirectResponse(url="/static/index.html")
 
+
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "graph_loaded": GRAPH is not None,
+        "graph_db_exists": os.path.exists(GRAPH_DB_PATH),
+        "search_db_exists": os.path.exists(SEARCH_DB_PATH),
+    }
 
-# API: search endpoint (wraps your existing search_artists)
+
+# --------------------------------------------------
+# Artist search using SQLite
+# --------------------------------------------------
+
 @app.get("/api/search")
-def api_search(q: str = Query(..., min_length=1), limit: int = 10):
-    conn = get_connection()
+def api_search(
+    q: str = Query(..., min_length=1),
+    limit: int = 10,
+):
+    query = q.strip()
+    limit = max(1, min(limit, 50))
+
+    if not query:
+        return JSONResponse(content=[])
+
+    if not os.path.exists(SEARCH_DB_PATH):
+        raise HTTPException(
+            status_code=503,
+            detail="Artist search database is not available.",
+        )
+
+    conn = sqlite3.connect(SEARCH_DB_PATH)
+
     try:
-        rows = search_artists(conn, q, limit=limit)
+        rows = conn.execute(
+            """
+            SELECT
+                a.id,
+                a.name,
+                a.gid,
+                a.release_count
+            FROM artist_fts AS f
+            JOIN artists AS a ON a.id = f.rowid
+            WHERE f.name LIKE ?
+            ORDER BY
+                CASE
+                    WHEN LOWER(a.name) = LOWER(?) THEN 0
+                    WHEN LOWER(a.name) LIKE LOWER(?) THEN 1
+                    ELSE 2
+                END,
+                a.name
+            LIMIT ?
+            """,
+            (
+                f"%{query}%",
+                query,
+                f"{query}%",
+                limit,
+            ),
+        ).fetchall()
+
+    except sqlite3.Error as e:
+        print(f"SQLite artist search error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Artist search failed.",
+        )
+
     finally:
         conn.close()
-    result = []
-    for r in rows:
-        aid, name, gid, release_count = r
-        result.append({
-            "id": int(aid),
+
+    results = [
+        {
+            "id": int(artist_id),
             "name": name,
-            "gid": str(gid) if gid is not None else None,
-            "release_count": int(release_count),
-        })
-    return JSONResponse(result)
+            "gid": gid,
+            "release_count": int(release_count or 0),
+        }
+        for artist_id, name, gid, release_count in rows
+    ]
+
+    return JSONResponse(content=results)
 
 
-# API: find path with optional exclude_edges
+# --------------------------------------------------
+# Artist name and MusicBrainz ID lookup
+# --------------------------------------------------
+
+def lookup_artists(artist_ids):
+    """Retrieve names and MusicBrainz IDs without a large RAM cache."""
+
+    unique_ids = list(dict.fromkeys(int(x) for x in artist_ids))
+
+    if not unique_ids:
+        return {}
+
+    if not os.path.exists(SEARCH_DB_PATH):
+        raise HTTPException(
+            status_code=503,
+            detail="Artist lookup database is not available.",
+        )
+
+    conn = sqlite3.connect(SEARCH_DB_PATH)
+
+    try:
+        result = {}
+
+        # Chunk IDs to stay comfortably below SQLite's parameter limit.
+        for start in range(0, len(unique_ids), 500):
+            chunk = unique_ids[start:start + 500]
+            placeholders = ",".join("?" for _ in chunk)
+
+            rows = conn.execute(
+                f"""
+                SELECT id, name, gid
+                FROM artists
+                WHERE id IN ({placeholders})
+                """,
+                chunk,
+            ).fetchall()
+
+            for artist_id, name, gid in rows:
+                result[int(artist_id)] = (name, gid)
+
+        return result
+
+    except sqlite3.Error as e:
+        print(f"SQLite artist lookup error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Could not look up artist names.",
+        )
+
+    finally:
+        conn.close()
+
+
+# --------------------------------------------------
+# Find collaboration path
+# --------------------------------------------------
+
 @app.post("/api/path")
 def api_path(req: PathRequest):
-    global GRAPH, ARTIST_CACHE
-
-    # optionally rebuild first
     if req.rebuild:
-        with GRAPH_LOCK:
-            conn = get_connection()
-            try:
-                GRAPH = get_or_build_graph(conn=conn, force_rebuild=True)
-            finally:
-                conn.close()
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Graph rebuilding is not available on the deployed app. "
+                "Regenerate the graph database offline and redeploy it."
+            ),
+        )
 
-    # ensure graph is loaded
     if GRAPH is None:
-        with GRAPH_LOCK:
-            conn = get_connection()
-            try:
-                GRAPH = get_or_build_graph(conn=conn, force_rebuild=False)
-            finally:
-                conn.close()
+        raise HTTPException(
+            status_code=503,
+            detail="The collaboration graph database is not available.",
+        )
 
-    # ensure artist cache
-    if ARTIST_CACHE is None:
-        ARTIST_CACHE = load_artist_name_cache() or {}
+    # Confirm both artists belong to the graph.
+    missing = []
 
-    # Quick membership check
-    if req.source_id not in GRAPH or req.target_id not in GRAPH:
-        missing = []
-        if req.source_id not in GRAPH:
-            missing.append(req.source_id)
-        if req.target_id not in GRAPH:
-            missing.append(req.target_id)
-        detail_msg = "One or more artists not present in the filtered collaboration graph."
-        raise HTTPException(status_code=404, detail=detail_msg)
+    if req.source_id not in GRAPH:
+        missing.append(req.source_id)
 
-    # Build excluded edges set expected by pathfinding: list of (a,b)
+    if req.target_id not in GRAPH:
+        missing.append(req.target_id)
+
+    if missing:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "One or more artists are not present in the "
+                "filtered collaboration graph."
+            ),
+        )
+
+    # Convert excluded edges to tuples.
     excluded = None
+
     if req.exclude_edges:
         try:
-            excluded = [(int(e[0]), int(e[1])) for e in req.exclude_edges if len(e) >= 2]
-        except Exception:
-            excluded = None
+            excluded = [
+                (int(edge[0]), int(edge[1]))
+                for edge in req.exclude_edges
+                if len(edge) >= 2
+            ]
+        except (TypeError, ValueError, IndexError):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid excluded-edge format.",
+            )
 
-    start = time.time()
-    path = bidirectional_bfs_with_tracks(GRAPH, req.source_id, req.target_id, excluded_edges=excluded)
-    elapsed = time.time() - start
+    # Find shortest path.
+    start_time = time.time()
+
+    path = bidirectional_bfs_with_tracks(
+        GRAPH,
+        req.source_id,
+        req.target_id,
+        excluded_edges=excluded,
+    )
+
+    elapsed = time.time() - start_time
 
     if not path:
-        return {"found": False, "seconds": elapsed, "path": []}
+        return {
+            "found": False,
+            "seconds": elapsed,
+            "path": [],
+        }
 
-    # Build readable information using artist cache
+    # Resolve names and MusicBrainz IDs from SQLite.
+    artist_ids = [req.source_id]
+    artist_ids.extend(node_id for node_id, _ in path)
+    artist_info = lookup_artists(artist_ids)
+
     full_path = []
-    prev_id = req.source_id
-    prev_name = ARTIST_CACHE.get(prev_id, ("<unknown>", None))[0]
+    previous_id = req.source_id
+
+    previous_name = artist_info.get(
+        previous_id,
+        (f"<id:{previous_id}>", None),
+    )[0]
+
     for node_id, track in path:
-        node_name, node_gid = ARTIST_CACHE.get(node_id, (None, None))
-        if node_name is None:
-            # fallback to DB
-            conn = get_connection()
-            try:
-                cur = conn.cursor()
-                cur.execute("SELECT name, gid FROM artist WHERE id = %s", (node_id,))
-                row = cur.fetchone()
-                if row:
-                    node_name, node_gid = row[0], row[1]
-                else:
-                    node_name, node_gid = f"<id:{node_id}>", None
-                cur.close()
-            finally:
-                conn.close()
+        node_name, node_gid = artist_info.get(
+            node_id,
+            (f"<id:{node_id}>", None),
+        )
 
-        full_path.append({
-            "from_id": prev_id,
-            "from_name": prev_name,
-            "to_id": int(node_id),
-            "to_name": node_name,
-            "to_mbid": str(node_gid) if node_gid else None,
-            "track": track
-        })
-        prev_id = node_id
-        prev_name = node_name
+        full_path.append(
+            {
+                "from_id": int(previous_id),
+                "from_name": previous_name,
+                "to_id": int(node_id),
+                "to_name": node_name,
+                "to_mbid": str(node_gid) if node_gid else None,
+                "track": track,
+            }
+        )
 
-    return {"found": True, "seconds": elapsed, "degrees": len(path), "path": full_path}
+        previous_id = node_id
+        previous_name = node_name
+
+    return {
+        "found": True,
+        "seconds": elapsed,
+        "degrees": len(path),
+        "path": full_path,
+    }

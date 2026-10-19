@@ -123,6 +123,7 @@ def api_search(
             FROM artist_fts AS f
             JOIN artists AS a ON a.id = f.rowid
             WHERE f.name LIKE ?
+                AND a.release_count >= 20
             ORDER BY
                 CASE
                     WHEN LOWER(a.name) = LOWER(?) THEN 0

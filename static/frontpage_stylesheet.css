@@ -39,6 +39,24 @@ html, body {
   width: 100%;
 }
 
+.home-link,
+.home-link:hover,
+.home-link:visited,
+.home-link:active {
+  color: inherit;
+  text-decoration: none;
+}
+
+.home-link h1 {
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.home-link:hover h1 {
+  opacity: 0.75;
+}
+
 /* ---------------------------
    TYPOGRAPHY
    --------------------------- */
@@ -77,6 +95,7 @@ p {
   max-width: 400px;
 }
 
+
 input[type="text"], input[type="search"], textarea {
   width: 100%;
   padding: 12px 25px;
@@ -91,10 +110,12 @@ input[type="text"], input[type="search"], textarea {
 
 input::placeholder { color: #999; text-align: center; }
 
-input:focus {
+input:focus,
+textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(144,200,243,0.35);
-  transform: scale(1.02);
+  box-shadow: none;
+  transform: none;
+  border-color: #333;
 }
 
 /* Autocomplete dropdown */
@@ -124,7 +145,7 @@ input:focus {
 
 .autocomplete-item:hover,
 .autocomplete-item.highlighted {
-  background-color: #7f5de7; /* purple-ish highlight */
+  background-color: #D1495B; /* purple-ish highlight */
   color: #fff;
 }
 
@@ -142,14 +163,14 @@ button {
   cursor: pointer;
   border: none;
   border-radius: 10px;
-  background: #9362dd;
+  background: #D1495B;
   color: #fff;
   padding: 12px 30px;
   font-size: 1rem;
   transition: transform 0.12s ease, background-color 0.2s ease;
 }
 
-button:hover { transform: translateY(-2px); background: #7536D3; }
+button:hover { transform: translateY(-2px); background: #D1495B; }
 
 /* ---------------------------
    RESULTS / PATH LAYOUT
@@ -378,7 +399,7 @@ footer {
 }
 
 .footer-buttons button {
-  background: #9362dd;
+  background: #D1495B;
   color: #fff;
   border-radius: 8px;
   padding: 10px 18px;
@@ -412,6 +433,60 @@ footer {
   .progress-circle { width: min(calc(100% - 36px), 180px); height: min(calc(100% - 36px), 180px); }
   .footer-buttons { flex-direction: column; gap: 12px; }
   .footer-buttons #tryAgainBtn { width: 100%; }
+
+
+
+  /* Mobile front page layout */
+  #connectionForm {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .input-container {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: center;
+    width: 100%;
+    gap: 14px;
+  }
+
+  .input-wrapper {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  /* Keep the connector centered between the two fields */
+  .link-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .link-icon .static-icon {
+    display: block;
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Match the button width to the artist fields */
+  .button-container {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  .button-container button {
+    width: 100%;
+    max-width: 400px;
+  }
+  
 }
 
 /* ---------------------------
@@ -424,15 +499,32 @@ footer {
   20%, 60% { transform: translateX(-6px); }
   40%, 80% { transform: translateX(6px); }
 }
-input.shake { animation: shake 0.4s ease; border: 1px solid #d33; }
+input.shake { animation: shake 0.4s ease; border: 1px solid #D1495B; }
 
 /* ---------------------------
    LOADING ANIMATION
    --------------------------- */
 
 /* Default state - no animation */
+/* Reserve space for the connector before its SVG loads */
 .link-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   transition: transform 0.2s ease;
+}
+
+/* Keep the SVG object inside the reserved space */
+.link-icon .static-icon {
+  display: block;
+  width: 44px;
+  height: 44px;
+  border: 0;
 }
 
 /* Loading state - spinning animation */

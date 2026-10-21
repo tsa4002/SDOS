@@ -21,14 +21,19 @@ console.log('SDOS main.js starting...');
     setTimeout(() => el.classList.remove('shake'), 420);
   }
 
+
   function generateMusicServiceUrls(trackName, artistName) {
-    const query = encodeURIComponent(`${trackName} ${artistName}`);
-    return {
-      spotify: `https://open.spotify.com/search/${query}`,
-      youtube: `https://www.youtube.com/results?search_query=${query}`,
-      apple: `https://music.apple.com/us/search?term=${query}`,
-    };
+      const query = encodeURIComponent(
+        `${trackName} ${artistName}`
+      ).replace(/'/g, '%27');
+
+      return {
+        spotify: `https://open.spotify.com/search/${query}`,
+        youtube: `https://www.youtube.com/results?search_query=${query}`,
+        apple: `https://music.apple.com/us/search?term=${query}`,
+      };
   }
+
 
   // ---------- Loading icon control ----------
   function startLoadingAnimation() {
@@ -98,58 +103,68 @@ console.log('SDOS main.js starting...');
     dropdown2.style.display = 'none';
     a2.parentElement.appendChild(dropdown2);
   }
-
+  
   // ---------- Cover + preview cache ----------
   const coverCache = new Map();
 
-  async function fetchTrackInfo(trackName, artistName) {
-    if (!trackName) return { cover: null, preview: null };
-    const key = `${trackName}||${artistName || ''}`;
-    if (coverCache.has(key)) return coverCache.get(key);
+  function normalizeMusicText(value) {
+    return String(value || '')
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim()
+      .replace(/\s+/g, ' ');
+  }
 
-    try {
-      const q = encodeURIComponent(`${trackName} ${artistName || ''}`);
-      const url = `https://itunes.apple.com/search?term=${q}&entity=song&limit=1&country=US`;
-      const resp = await fetch(url);
-      if (resp.ok) {
-        const j = await resp.json();
-        if (j && Array.isArray(j.results) && j.results.length > 0) {
-          const it = j.results[0];
-          let cover = it.artworkUrl100 || null;
-          if (cover) {
-            try { cover = cover.replace(/100x100/g, '600x600'); } catch (e) {}
-          }
-          const preview = it.previewUrl || null;
-          const out = { cover, preview, raw: it };
-          coverCache.set(key, out);
-          return out;
-        }
-      } else {
-        console.debug('iTunes search non-ok', resp.status);
-      }
-    } catch (err) {
-      console.debug('iTunes search fetch error (likely CORS):', err);
+
+async function fetchTrackInfo(trackName, artist1, artist2) {
+  if (!trackName) return { cover: null, preview: null };
+
+  const artists = [artist1, artist2].filter(Boolean).sort();
+
+  const key =
+    `${normalizeMusicText(trackName)}||` +
+    artists.map(normalizeMusicText).join('||');
+
+  if (coverCache.has(key)) {
+    return coverCache.get(key);
+  }
+
+  const none = { cover: null, preview: null };
+
+  try {
+    const params = new URLSearchParams({
+      track: trackName,
+      artist1: artist1 || '',
+      artist2: artist2 || ''
+    });
+
+    const response = await fetch(`/api/cover?${params.toString()}`);
+
+    if (!response.ok) {
+      console.debug('Cover lookup returned:', response.status);
+      coverCache.set(key, none);
+      return none;
     }
 
-    try {
-      const proxy = '/api/cover?track=' + encodeURIComponent(trackName) + (artistName ? '&artist=' + encodeURIComponent(artistName) : '');
-      const r = await fetch(proxy);
-      if (r.ok) {
-        const j = await r.json();
-        const out = { cover: j.cover || null, preview: j.preview || null };
-        coverCache.set(key, out);
-        return out;
-      } else {
-        console.debug('/api/cover returned', r.status);
-      }
-    } catch (err) {
-      console.debug('Server /api/cover failed:', err);
-    }
+    const data = await response.json();
 
-    const none = { cover: null, preview: null };
+    const result = {
+      cover: data.cover || null,
+      preview: data.preview || null
+    };
+
+    coverCache.set(key, result);
+    return result;
+  } catch (error) {
+    console.debug('Cover lookup failed:', error);
     coverCache.set(key, none);
     return none;
   }
+}
+
+
 
   // ---------- Search / Autocomplete ----------
   async function doSearch(q) {
@@ -201,36 +216,69 @@ console.log('SDOS main.js starting...');
     dropdownEl.style.display = 'block';
   }
 
-  function setupAutocompleteFor(inputEl, dropdownEl) {
-    if (!inputEl || !dropdownEl) return;
-    const hid = document.getElementById(inputEl.id + '_id');
 
-    const deb = debounce(async () => {
-      const q = (inputEl.value || '').trim();
-      if (!q) {
-        dropdownEl.style.display = 'none';
-        if (hid) hid.value = '';
-        return;
-      }
-      const rows = await doSearch(q);
-      renderDropdown(dropdownEl, rows, inputEl);
-    }, 250);
+function setupAutocompleteFor(inputEl, dropdownEl) {
+  if (!inputEl || !dropdownEl) return;
 
-    inputEl.addEventListener('input', () => {
+  const hid = document.getElementById(inputEl.id + '_id');
+  let searchVersion = 0;
+
+  const deb = debounce(async () => {
+    const q = (inputEl.value || '').trim();
+    const version = searchVersion;
+
+    if (!q) {
+      dropdownEl.innerHTML = '';
+      dropdownEl.style.display = 'none';
       if (hid) hid.value = '';
-      if (inputEl.id === 'artist1' && img1) { img1.style.display = 'none'; img1.src = ''; }
-      if (inputEl.id === 'artist2' && img2) { img2.style.display = 'none'; img2.src = ''; }
-      deb();
-    });
+      return;
+    }
 
-    inputEl.addEventListener('focus', () => {
-      if (dropdownEl.innerHTML) dropdownEl.style.display = 'block';
-    });
+    const rows = await doSearch(q);
 
-    inputEl.addEventListener('blur', () => {
-      setTimeout(() => dropdownEl.style.display = 'none', 150);
-    });
-  }
+    // Ignore results from an older search.
+    if (version !== searchVersion) return;
+
+    // Also verify the input still matches this search.
+    if (q !== inputEl.value.trim()) return;
+
+    renderDropdown(dropdownEl, rows, inputEl);
+  }, 200);
+
+  inputEl.addEventListener('input', () => {
+    // Invalidate any search that is already in progress.
+    searchVersion++;
+
+    // Clear the selected artist ID when the text changes.
+    if (hid) hid.value = '';
+
+    if (inputEl.id === 'artist1' && img1) {
+      img1.style.display = 'none';
+      img1.src = '';
+    }
+
+    if (inputEl.id === 'artist2' && img2) {
+      img2.style.display = 'none';
+      img2.src = '';
+    }
+
+    // Don't display outdated results while waiting.
+    dropdownEl.style.display = 'none';
+    deb();
+  });
+
+  inputEl.addEventListener('focus', () => {
+    if (dropdownEl.innerHTML && inputEl.value.trim()) {
+      dropdownEl.style.display = 'block';
+    }
+  });
+
+  inputEl.addEventListener('blur', () => {
+    setTimeout(() => {
+      dropdownEl.style.display = 'none';
+    }, 150);
+  });
+}
 
   // Hide dropdowns when clicking outside
   document.addEventListener('click', (ev) => {
@@ -403,10 +451,24 @@ console.log('SDOS main.js starting...');
 
   // ---------- Render server path with covers, fade-in, apple->MusicBrainz link ----------
   async function renderPathWithCovers(serverPath, animate = true) {
-    const enriched = await Promise.all(serverPath.map(async (step, idx) => {
-      const info = step.track ? await fetchTrackInfo(step.track, step.from_name || '') : { cover: null, preview: null };
-      return Object.assign({}, step, { cover: info.cover, preview: info.preview, stepNumber: idx + 1 });
-    }));
+    const enriched = await Promise.all(
+    serverPath.map(async (step, idx) => {
+      const info = step.track
+        ? await fetchTrackInfo(
+            step.track,
+            step.from_name || '',
+            step.to_name || ''
+          )
+        : { cover: null, preview: null };
+
+      return {
+        ...step,
+        cover: info.cover,
+        preview: info.preview,
+        stepNumber: idx + 1
+      };
+    })
+  );
 
     let html = '<div class="path-container">';
 

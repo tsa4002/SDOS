@@ -1,3 +1,12 @@
+import json
+import re
+import unicodedata
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+
+from html import unescape
+from html.parser import HTMLParser
+from urllib.parse import urlencode, urljoin, urlparse, parse_qs
 
 import os
 import time
@@ -90,9 +99,168 @@ def health():
 
 
 # --------------------------------------------------
-# Artist search using SQLite
+# Track artwork and preview lookup using iTunes
 # --------------------------------------------------
 
+def normalize_music_text(value):
+    """Normalize music titles and artist names for comparison."""
+    value = unicodedata.normalize("NFKD", str(value or ""))
+    value = "".join(
+        char for char in value
+        if not unicodedata.combining(char)
+    )
+    value = value.lower()
+    value = re.sub(r"[^a-z0-9]+", " ", value)
+    return " ".join(value.split())
+
+
+
+class AppleSongLinkParser(HTMLParser):
+    """Collect direct Apple Music song links in page order."""
+
+    def __init__(self):
+        super().__init__()
+        self.song_links = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag != "a":
+            return
+
+        href = dict(attrs).get("href")
+        if not href:
+            return
+
+        href = unescape(href)
+        full_url = urljoin("https://music.apple.com", href)
+        parsed = urlparse(full_url)
+
+        if parsed.netloc.lower() not in {
+            "music.apple.com",
+            "www.music.apple.com",
+        }:
+            return
+
+        if "/album/" not in parsed.path:
+            return
+
+        # Apple song links commonly identify the specific song using ?i=ID.
+        track_ids = parse_qs(parsed.query).get("i", [])
+
+        if track_ids and track_ids[0].isdigit():
+            entry = (track_ids[0], full_url)
+
+            if entry not in self.song_links:
+                self.song_links.append(entry)
+
+
+@app.get("/api/cover")
+def api_cover(
+    track: str = Query(..., min_length=1),
+    artist1: str = "",
+    artist2: str = "",
+):
+    track = track.strip()
+    artist1 = artist1.strip()
+    artist2 = artist2.strip()
+
+    if not track:
+        return {"cover": None, "preview": None}
+
+    # Match the query structure used by the Apple Music hyperlink.
+    search_term = " ".join(
+        value for value in (track, artist1, artist2) if value
+    )
+
+    search_url = (
+        "https://music.apple.com/us/search?"
+        + urlencode({"term": search_term})
+    )
+
+    try:
+        request = Request(
+            search_url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (compatible; SDOS/1.0)",
+                "Accept-Language": "en-US,en;q=0.9",
+            },
+        )
+
+        with urlopen(request, timeout=15) as response:
+            page_html = response.read().decode(
+                "utf-8", errors="replace"
+            )
+
+    except Exception as exc:
+        print(f"Apple Music search page failed: {exc}")
+        return {"cover": None, "preview": None}
+
+    parser = AppleSongLinkParser()
+    parser.feed(page_html)
+
+    if not parser.song_links:
+        print(f"No direct song links found on Apple Music: {search_term}")
+        return {"cover": None, "preview": None}
+
+    # Use Apple's own first direct song result.
+    track_id, song_url = parser.song_links[0]
+
+    print(f"Apple Music selected: {song_url}")
+
+    # Fetch metadata for that exact song ID, not another title search.
+    lookup_url = (
+        "https://itunes.apple.com/lookup?"
+        + urlencode({"id": track_id, "country": "US"})
+    )
+
+    try:
+        request = Request(
+            lookup_url,
+            headers={"User-Agent": "SDOS/1.0"},
+        )
+
+        with urlopen(request, timeout=10) as response:
+            data = json.loads(
+                response.read().decode("utf-8")
+            )
+
+    except Exception as exc:
+        print(f"iTunes track lookup failed for {track_id}: {exc}")
+        return {"cover": None, "preview": None}
+
+    results = data.get("results", [])
+
+    if not results:
+        print(f"No iTunes metadata returned for track ID {track_id}")
+        return {"cover": None, "preview": None}
+
+    item = results[0]
+
+    cover = item.get("artworkUrl100")
+
+    if cover:
+        cover = cover.replace("100x100", "600x600")
+
+    preview = item.get("previewUrl")
+
+    print(
+        f"Apple Music selected: {item.get('trackName')} by "
+        f"{item.get('artistName')}; "
+        f"preview={bool(preview)}"
+    )
+
+    return {
+        "cover": cover,
+        "preview": preview,
+        "appleUrl": song_url,
+    }
+
+
+
+
+
+# --------------------------------------------------
+# Artist search using SQLite
+# --------------------------------------------------
 @app.get("/api/search")
 def api_search(
     q: str = Query(..., min_length=1),
@@ -110,36 +278,68 @@ def api_search(
             detail="Artist search database is not available.",
         )
 
+    # We cannot guarantee graph eligibility if the graph is unavailable.
+    if GRAPH is None:
+        raise HTTPException(
+            status_code=503,
+            detail="The collaboration graph database is not available.",
+        )
+
     conn = sqlite3.connect(SEARCH_DB_PATH)
 
     try:
-        rows = conn.execute(
-            """
-            SELECT
-                a.id,
-                a.name,
-                a.gid,
-                a.release_count
-            FROM artist_fts AS f
-            JOIN artists AS a ON a.id = f.rowid
-            WHERE f.name LIKE ?
-                AND a.release_count >= 20
-            ORDER BY
-                CASE
-                    WHEN LOWER(a.name) = LOWER(?) THEN 0
-                    WHEN LOWER(a.name) LIKE LOWER(?) THEN 1
-                    ELSE 2
-                END,
-                a.name
-            LIMIT ?
-            """,
-            (
-                f"%{query}%",
-                query,
-                f"{query}%",
-                limit,
-            ),
-        ).fetchall()
+        results = []
+        offset = 0
+
+        # Fetch candidates in batches so ineligible artists do not
+        # prevent eligible artists further down the ranking from appearing.
+        batch_size = max(100, min(500, limit * 10))
+
+        while len(results) < limit:
+            rows = conn.execute(
+                """
+                SELECT
+                    a.id,
+                    a.name,
+                    a.gid,
+                    a.release_count
+                FROM artist_fts AS f
+                JOIN artists AS a ON a.id = f.rowid
+                WHERE f.name LIKE ?
+                    AND a.release_count >= 20
+                ORDER BY
+                    a.release_count DESC,
+                    a.name COLLATE NOCASE ASC
+                LIMIT ? OFFSET ?
+                """,
+                (
+                    f"%{query}%",
+                    batch_size,
+                    offset,
+                ),
+            ).fetchall()
+
+            if not rows:
+                break
+
+            offset += len(rows)
+
+            for artist_id, name, gid, release_count in rows:
+                artist_id = int(artist_id)
+
+                # Only offer artists present in the actual graph.
+                if artist_id not in GRAPH:
+                    continue
+
+                results.append({
+                    "id": artist_id,
+                    "name": name,
+                    "gid": gid,
+                    "release_count": int(release_count or 0),
+                })
+
+                if len(results) >= limit:
+                    break
 
     except sqlite3.Error as e:
         print(f"SQLite artist search error: {e}")
@@ -150,16 +350,6 @@ def api_search(
 
     finally:
         conn.close()
-
-    results = [
-        {
-            "id": int(artist_id),
-            "name": name,
-            "gid": gid,
-            "release_count": int(release_count or 0),
-        }
-        for artist_id, name, gid, release_count in rows
-    ]
 
     return JSONResponse(content=results)
 
@@ -251,8 +441,8 @@ def api_path(req: PathRequest):
         raise HTTPException(
             status_code=404,
             detail=(
-                "One or more artists are not present in the "
-                "filtered collaboration graph."
+                "Unfortunately, one of the artists is not present in the filtered collaboration graph." 
+                "Please try another artist."
             ),
         )
 

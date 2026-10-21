@@ -10,14 +10,17 @@
 </head>
 <body>
   <div class="page">
-    <h1>Six Degrees of Sound</h1>
+    <a href="/" class="home-link" aria-label="Return to SDOS home">
+      <h1> Six Degrees of Sound </h1>
+    </a>
     <p>Link two artists using overlapping collaborations</p>
+
 
     <form id="connectionForm">
       <div class="input-container">
         <!-- Artist 1 -->
         <div class="input-wrapper">
-          <input id="artist1" type="text" placeholder="Start typing artist name..." autocomplete="off" />
+          <input id="artist1" type="text" placeholder="Artist 1" autocomplete="off" />
           <input id="artist1_id" type="hidden" name="artist1_id" />
         </div>
 
@@ -28,12 +31,15 @@
           data="/static/images/loading.svg" 
           type="image/svg+xml"
           class="static-icon"
+          width="44"
+          height="44"
         ></object>
       </div>
         
+      
         <!-- Artist 2 -->
         <div class="input-wrapper">
-          <input id="artist2" type="text" placeholder="Start typing artist name..." autocomplete="off" />
+          <input id="artist2" type="text" placeholder="Artist 2" autocomplete="off" />
           <input id="artist2_id" type="hidden" name="artist2_id" />
         </div>
       </div>

@@ -465,15 +465,15 @@ footer {
     align-items: center;
     justify-content: center;
     align-self: center;
-    flex: 0 0 44px;
-    width: 44px;
-    height: 44px;
+    flex: 0 0 52px;
+    width: 52px;
+    height: 52px;
   }
 
   .link-icon .static-icon {
     display: block;
-    width: 44px;
-    height: 44px;
+    width: 52px;
+    height: 52px;
   }
 
   /* Match the button width to the artist fields */
@@ -511,19 +511,19 @@ input.shake { animation: shake 0.4s ease; border: 1px solid #D1495B; }
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 44px;
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
+  flex: 0 0 60px;
+  width: 60px;
+  height: 60px;
+  min-width: 60px;
+  min-height: 60px;
   transition: transform 0.2s ease;
 }
 
 /* Keep the SVG object inside the reserved space */
 .link-icon .static-icon {
   display: block;
-  width: 44px;
-  height: 44px;
+  width: 60px;
+  height: 60px;
   border: 0;
 }
 

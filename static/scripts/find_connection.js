@@ -449,6 +449,42 @@ function setupAutocompleteFor(inputEl, dropdownEl) {
     });
   }
 
+
+  // ---------- 3D album-cover tilt ----------
+  function attachCoverTilt() {
+    const supportsHover = window.matchMedia(
+      '(hover: hover) and (pointer: fine)'
+    ).matches;
+
+    if (!supportsHover || !resultsEl) return;
+
+    const maxTilt = 18;
+
+    resultsEl.querySelectorAll('.track-cover-wrapper').forEach(wrapper => {
+      wrapper.addEventListener('pointermove', event => {
+        const rect = wrapper.getBoundingClientRect();
+
+        // Normalize cursor position from -1 to +1.
+        const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        const y = ((event.clientY - rect.top) / rect.height) * 2 - 1;
+
+        // Reverse the usual tilt so the corner under the cursor
+        // appears to dip away from the viewer.
+        const rotateX = -y * maxTilt;
+        const rotateY = x * maxTilt;
+
+        wrapper.style.setProperty('--tilt-x', `${rotateX}deg`);
+        wrapper.style.setProperty('--tilt-y', `${rotateY}deg`);
+      });
+
+      wrapper.addEventListener('pointerleave', () => {
+        wrapper.style.setProperty('--tilt-x', '0deg');
+        wrapper.style.setProperty('--tilt-y', '0deg');
+      });
+    });
+  }
+
+
   // ---------- Render server path with covers, fade-in, apple->MusicBrainz link ----------
   async function renderPathWithCovers(serverPath, animate = true) {
     const enriched = await Promise.all(
@@ -521,10 +557,21 @@ function setupAutocompleteFor(inputEl, dropdownEl) {
 
     if (resultsEl) resultsEl.innerHTML = html;
 
+    attachCoverTilt();
+
     const refreshBtn = document.getElementById('refreshBtn');
     if (refreshBtn) refreshBtn.addEventListener('click', () => window.location.reload());
     const tryBtn = document.getElementById('tryAgainBtn');
-    if (tryBtn) tryBtn.addEventListener('click', tryAnotherRoute);
+    if (tryBtn) {
+      tryBtn.addEventListener('click', () => {
+          document.documentElement.style.scrollBehavior = 'auto';
+          window.scrollTo(0, 0);
+          tryAnotherRoute();
+        });
+    }
+
+
+
     const shareBtn = document.getElementById('shareBtn');
     if (shareBtn) shareBtn.addEventListener('click', () => {
       const artistA = a1 ? a1.value.trim() : '';

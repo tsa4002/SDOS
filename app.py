@@ -256,7 +256,13 @@ def api_cover(
 
 
 
-
+def normalize_artist_name(name: str) -> str:
+    normalized = unicodedata.normalize("NFKD", name)
+    return "".join(
+        char
+        for char in normalized
+        if not unicodedata.combining(char)
+    ).casefold()
 
 # --------------------------------------------------
 # Artist search using SQLite
@@ -305,7 +311,7 @@ def api_search(
                     a.release_count
                 FROM artist_fts AS f
                 JOIN artists AS a ON a.id = f.rowid
-                WHERE f.name LIKE ?
+                WHERE a.name_normalized LIKE ?
                     AND a.release_count >= 20
                 ORDER BY
                     a.release_count DESC,
@@ -313,7 +319,7 @@ def api_search(
                 LIMIT ? OFFSET ?
                 """,
                 (
-                    f"%{query}%",
+                    f"%{normalize_artist_name(query)}%",
                     batch_size,
                     offset,
                 ),

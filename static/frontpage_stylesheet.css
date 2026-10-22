@@ -486,7 +486,7 @@ footer {
     width: 100%;
     max-width: 400px;
   }
-  
+
 }
 
 /* ---------------------------
@@ -539,5 +539,34 @@ input.shake { animation: shake 0.4s ease; border: 1px solid #D1495B; }
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+
+/* 3D album-cover tilt effect */
+.track-cover-wrapper {
+  transform: perspective(900px)
+    rotateX(var(--tilt-x, 0deg))
+    rotateY(var(--tilt-y, 0deg));
+  transform-origin: center center;
+  transform-style: preserve-3d;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out;
+  will-change: transform;
+  border-radius: 12px;
+}
+
+/* Only activate the effect on devices with a real hover cursor */
+@media (hover: hover) and (pointer: fine) {
+  .track-cover-wrapper:hover {
+    box-shadow: 0 16px 28px rgba(0, 0, 0, 0.22);
+  }
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .track-cover-wrapper {
+    transition: none;
   }
 }

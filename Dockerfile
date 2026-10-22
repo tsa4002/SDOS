@@ -1,3 +1,4 @@
+
 FROM python:3.9-slim
 
 # Install system dependencies
@@ -14,7 +15,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code, excluding local data via .dockerignore
+# Copy application code
 COPY . .
 
 # Download the databases required by SDOS
@@ -26,8 +27,8 @@ RUN mkdir -p data/processed \
     && rm /tmp/artist_search.sqlite.gz \
     && curl -fL \
        "https://github.com/tsa4002/SDOS/releases/download/sdos-data-v1/collaboration_graph.sqlite" \
-       -o data/processed/collaboration_graph.sqlite
-
+       -o data/processed/collaboration_graph.sqlite \
+    && python normalize_artist_search.py
 
 # Start the application
 CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-8000}"]

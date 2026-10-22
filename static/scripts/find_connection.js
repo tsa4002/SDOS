@@ -290,6 +290,84 @@ function setupAutocompleteFor(inputEl, dropdownEl) {
     });
   });
 
+  function glideToTop(duration = 450) {
+  return new Promise((resolve) => {
+    const scrollTargets = new Set([
+      window,
+      document.documentElement,
+      document.body,
+      document.scrollingElement
+    ]);
+
+    document.querySelectorAll('*').forEach((el) => {
+      const style = window.getComputedStyle(el);
+
+      if (
+        el.scrollHeight > el.clientHeight + 1 &&
+        ['auto', 'scroll', 'hidden', 'overlay'].includes(style.overflowY)
+      ) {
+        scrollTargets.add(el);
+      }
+    });
+
+    const roots = Array.from(scrollTargets);
+    const startPositions = new Map();
+
+    roots.forEach((el) => {
+      if (el === window) {
+        startPositions.set(el, window.scrollY);
+      } else if (el) {
+        startPositions.set(el, el.scrollTop);
+      }
+    });
+
+    const maxStart = Math.max(0, ...startPositions.values());
+
+    if (maxStart <= 2) {
+      resolve();
+      return;
+    }
+
+    const startTime = performance.now();
+
+    function step(now) {
+      const progress = Math.min(1, (now - startTime) / duration);
+
+      // Ease in and out for a natural glide.
+      const eased = progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+      roots.forEach((el) => {
+        const start = startPositions.get(el) || 0;
+        const position = Math.round(start * (1 - eased));
+
+        if (el === window) {
+          window.scrollTo(0, position);
+        } else if (el) {
+          el.scrollTop = position;
+        }
+      });
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        roots.forEach((el) => {
+          if (el === window) {
+            window.scrollTo(0, 0);
+          } else if (el) {
+            el.scrollTop = 0;
+          }
+        });
+
+        resolve();
+      }
+    }
+
+    requestAnimationFrame(step);
+  });
+}
+
   // ---------- Route management ----------
   const foundRoutes = [];
   let cycleIndex = 0;
@@ -562,12 +640,15 @@ function setupAutocompleteFor(inputEl, dropdownEl) {
     const refreshBtn = document.getElementById('refreshBtn');
     if (refreshBtn) refreshBtn.addEventListener('click', () => window.location.reload());
     const tryBtn = document.getElementById('tryAgainBtn');
+
     if (tryBtn) {
-      tryBtn.addEventListener('click', () => {
-          document.documentElement.style.scrollBehavior = 'auto';
-          window.scrollTo(0, 0);
-          tryAnotherRoute();
-        });
+      tryBtn.addEventListener('click', async () => {
+        // Glide to the top before starting the route search.
+        await glideToTop(850);
+
+        // Start the search after scrolling finishes.
+        tryAnotherRoute();
+      });
     }
 
 
@@ -700,9 +781,13 @@ function setupAutocompleteFor(inputEl, dropdownEl) {
       return;
     }
 
-    const union = unionEdgesFromFoundRoutes();
-    if (loadingEl) loadingEl.style.display = 'block';
-    if (findBtn) findBtn.disabled = true;
+  const union = unionEdgesFromFoundRoutes();
+
+  // Show and restart the loading animation.
+  if (loadingEl) loadingEl.style.display = 'block';
+  startLoadingAnimation();
+
+  if (findBtn) findBtn.disabled = true;
 
     try {
       const last = foundRoutes[foundRoutes.length - 1];
@@ -734,7 +819,6 @@ function setupAutocompleteFor(inputEl, dropdownEl) {
           cycleIndex = (cycleIndex + 1) % foundRoutes.length;
           const routeToShow = foundRoutes[cycleIndex].path;
           await renderPathWithCovers(routeToShow, false);
-          await forceSmoothScrollToTop(500);
           animateFadeIn();
         }
         return;
@@ -746,7 +830,6 @@ function setupAutocompleteFor(inputEl, dropdownEl) {
         if (foundRoutes.length > 0) {
           cycleIndex = (cycleIndex + 1) % foundRoutes.length;
           await renderPathWithCovers(foundRoutes[cycleIndex].path, false);
-          await forceSmoothScrollToTop(500);
           animateFadeIn();
           return;
         } else {
@@ -767,13 +850,14 @@ function setupAutocompleteFor(inputEl, dropdownEl) {
       foundRoutes.push({ path: normalized });
       cycleIndex = foundRoutes.length - 1;
       await renderPathWithCovers(normalized, false);
-      await forceSmoothScrollToTop(500);
       animateFadeIn();
 
     } catch (err) {
       console.error('tryAnotherRoute error', err);
       if (resultsEl) resultsEl.innerHTML = '<div class="results-header">Unexpected error finding alternative route</div>';
     } finally {
+      stopLoadingAnimation();
+
       if (loadingEl) loadingEl.style.display = 'none';
       if (findBtn) findBtn.disabled = false;
     }

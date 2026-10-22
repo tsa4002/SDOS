@@ -57,6 +57,10 @@ h2 {
   user-select: none;
 }
 
+.error-message {
+    white-space: pre-line;
+}
+
 /* --- Track Cover Art & Links (Corrected) --- */
 .song-card {
   width: 180px;

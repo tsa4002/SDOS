@@ -309,8 +309,7 @@ def api_search(
                     a.name,
                     a.gid,
                     a.release_count
-                FROM artist_fts AS f
-                JOIN artists AS a ON a.id = f.rowid
+                FROM artists AS a
                 WHERE a.name_normalized LIKE ?
                     AND a.release_count >= 20
                 ORDER BY
@@ -319,7 +318,7 @@ def api_search(
                 LIMIT ? OFFSET ?
                 """,
                 (
-                    f"%{normalize_artist_name(query)}%",
+                    f"{normalize_artist_name(query)}%",
                     batch_size,
                     offset,
                 ),

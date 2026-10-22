@@ -72,8 +72,19 @@ def main():
             if updated % 50000 == 0:
                 print(f"Processed {updated:,} artists...")
 
+        # Save all normalized artist names.
         conn.commit()
         print(f"Finished. Processed {updated:,} artists.")
+
+        # Create an index to speed up artist autocomplete searches.
+        conn.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_artists_name_normalized
+            ON artists(name_normalized COLLATE NOCASE)
+            """
+        )
+        conn.commit()
+        print("Created normalized artist-name index.")
 
     except Exception:
         conn.rollback()

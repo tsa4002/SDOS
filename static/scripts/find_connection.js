@@ -652,21 +652,48 @@ function setupAutocompleteFor(inputEl, dropdownEl) {
     }
 
 
-
     const shareBtn = document.getElementById('shareBtn');
-    if (shareBtn) shareBtn.addEventListener('click', () => {
-      const artistA = a1 ? a1.value.trim() : '';
-      const artistB = a2 ? a2.value.trim() : '';
-      const shareTitle = `What connects ${artistA} with ${artistB}?`;
-      const shareUrl = window.location.href;
-      if (navigator.share) {
-        navigator.share({ title: shareTitle, url: shareUrl }).catch(console.error);
-      } else {
-        navigator.clipboard.writeText(shareUrl).then(() => alert('Link copied to clipboard!')).catch(() => {
-          alert(`${shareTitle}\n${shareUrl}`);
-        });
-      }
-    });
+    if (shareBtn) {
+      shareBtn.addEventListener('click', async () => {
+        const artistA = a1 ? a1.value.trim() : '';
+        const artistB = a2 ? a2.value.trim() : '';
+
+        if (!artistA || !artistB) {
+          alert('Please select two artists before sharing.');
+          return;
+        }
+
+        const shareTitle = `What connects ${artistA} with ${artistB}?`;
+
+        const shareUrl = new URL(window.location.origin + window.location.pathname);
+        shareUrl.searchParams.set('artist1', artistA);
+        shareUrl.searchParams.set('artist2', artistB);
+
+        const url = shareUrl.toString();
+
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: shareTitle,
+              text: shareTitle,
+              url: url
+            });
+          } catch (error) {
+            if (error.name !== 'AbortError') {
+              console.error('Sharing failed:', error);
+            }
+          }
+        } else {
+          try {
+            await navigator.clipboard.writeText(`${shareTitle}\n${url}`);
+            alert('Question and link copied!');
+          } catch (error) {
+            prompt('Copy this question and link:', `${shareTitle}\n${url}`);
+          }
+        }
+      });
+    }
+
 
     // attach play/pause handlers & progress
     window._sdos_audio = window._sdos_audio || new Audio();
@@ -937,6 +964,82 @@ function setupAutocompleteFor(inputEl, dropdownEl) {
   } else {
     console.warn('Autocomplete inputs or dropdowns missing; autocomplete not initialized.');
   }
+
+  // ---------- Load and run a shared artist connection ----------
+async function loadSharedRoute() {
+  const params = new URLSearchParams(window.location.search);
+  const artistA = params.get('artist1');
+  const artistB = params.get('artist2');
+
+  if (!artistA || !artistB || !a1 || !a2 || !hid1 || !hid2 || !form) {
+    return;
+  }
+
+  let submitted = false;
+
+  a1.value = artistA;
+  a2.value = artistB;
+
+  if (findBtn) findBtn.disabled = true;
+  if (loadingEl) loadingEl.style.display = 'block';
+  startLoadingAnimation();
+
+  try {
+    async function findArtist(name) {
+      const matches = await doSearch(name);
+
+      return matches.find(
+        artist => artist.name.toLowerCase() === name.toLowerCase()
+      );
+    }
+
+    const [matchA, matchB] = await Promise.all([
+      findArtist(artistA),
+      findArtist(artistB)
+    ]);
+
+    if (!matchA || !matchB) {
+      if (resultsEl) {
+        resultsEl.textContent =
+          'Could not find one or both artists from this shared link. Please select them manually.';
+      }
+      return;
+    }
+
+    // Fill in the verified artist names and IDs.
+    a1.value = matchA.name;
+    a2.value = matchB.name;
+    hid1.value = matchA.id;
+    hid2.value = matchB.id;
+
+    // Let the existing form handler take over loading and pathfinding.
+    form.requestSubmit();
+    submitted = true;
+
+  } catch (error) {
+    console.error('Could not load shared route:', error);
+
+    if (resultsEl) {
+      resultsEl.textContent =
+        'Could not load this shared connection. Please try searching manually.';
+    }
+
+  } finally {
+    // Only clean up here if form submission never started.
+    if (!submitted) {
+      if (loadingEl) loadingEl.style.display = 'none';
+      stopLoadingAnimation();
+      if (findBtn) findBtn.disabled = false;
+    }
+  }
+}
+
+const sharedParams = new URLSearchParams(window.location.search);
+
+if (sharedParams.has('artist1') && sharedParams.has('artist2')) {
+  loadSharedRoute();
+}
+  
 
   // Initialize SVG animation state (paused by default)
   const linkIcon = document.getElementById('linkIcon');

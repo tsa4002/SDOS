@@ -505,8 +505,6 @@ input.shake { animation: shake 0.4s ease; border: 1px solid #D1495B; }
    LOADING ANIMATION
    --------------------------- */
 
-/* Default state - no animation */
-/* Reserve space for the connector before its SVG loads */
 .link-icon {
   display: flex;
   align-items: center;
@@ -516,27 +514,15 @@ input.shake { animation: shake 0.4s ease; border: 1px solid #D1495B; }
   height: 60px;
   min-width: 60px;
   min-height: 60px;
-  transition: transform 0.2s ease;
 }
 
-/* Keep the SVG object inside the reserved space */
-.link-icon .static-icon {
+/* Inline SVG, not an external object */
+.link-icon svg {
   display: block;
   width: 60px;
-  height: 60px;
-  border: 0;
+  height: 30px;
+  overflow: visible;
 }
-
-/* Keyframe for spinning */
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 
 /* 3D album-cover tilt effect */
 .track-cover-wrapper {
@@ -563,5 +549,20 @@ input.shake { animation: shake 0.4s ease; border: 1px solid #D1495B; }
 @media (prefers-reduced-motion: reduce) {
   .track-cover-wrapper {
     transition: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .link-icon {
+    flex: 0 0 52px;
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+    min-height: 52px;
+  }
+
+  .link-icon svg {
+    width: 52px;
+    height: 26px;
   }
 }

@@ -2,6 +2,25 @@
 // SDOS frontend main script - forced smooth scroll to absolute top with aggressive writes
 console.log('SDOS main.js starting...');
 
+  function stopCurrentAudio() {
+    const audio = window._sdos_audio;
+
+    if (!audio) return;
+
+    if (!audio.paused) {
+      audio.pause();
+    }
+
+    audio.currentTime = 0;
+
+    if (window._sdos_currentAnim) {
+      cancelAnimationFrame(window._sdos_currentAnim);
+    }
+
+    window._sdos_currentAnim = null;
+    window._sdos_currentBtn = null;
+  }
+
 (function () {
   // ---------- Utilities ----------
   function debounce(fn, wait = 300) {
@@ -35,73 +54,62 @@ console.log('SDOS main.js starting...');
   }
 
 
-// ---------- Loading icon control ----------
 
   // ---------- Loading icon control ----------
 
-    let isLinkIconLoading = false;
-    let linkGradientFrame = null;
-    let linkGradientAngle = 0;
-    let linkGradientLastTime = null;
+  let isLinkIconLoading = false;
+  let linkGradientFrame = null;
+  let linkGradientAngle = 0;
+  let linkGradientLastTime = null;
 
-    const LINK_GRADIENT_DURATION = 500;
+  const LINK_GRADIENT_DURATION = 500;
 
-    function getLinkIconGradient() {
-      const linkIcon = document.getElementById('linkIcon');
-
-      if (!linkIcon) return null;
-
-      try {
-        return linkIcon.contentDocument?.getElementById('flowGradient') || null;
-      } catch (error) {
-        return null;
-      }
-    }
-
-    function animateLinkIcon(timestamp) {
-      if (!isLinkIconLoading) {
-        linkGradientFrame = null;
-        linkGradientLastTime = null;
-        return;
-      }
-
-      if (linkGradientLastTime !== null) {
-        const elapsed = timestamp - linkGradientLastTime;
-        linkGradientAngle =
-          (linkGradientAngle + elapsed * 360 / LINK_GRADIENT_DURATION) % 360;
-      }
-
-      linkGradientLastTime = timestamp;
-
-      const gradient = getLinkIconGradient();
-
-      if (gradient) {
-        gradient.setAttribute(
-          'gradientTransform',
-          `rotate(${linkGradientAngle} 40 20)`
-        );
-      }
-
-      linkGradientFrame = requestAnimationFrame(animateLinkIcon);
-    }
-
-    function startLoadingAnimation() {
-      if (isLinkIconLoading) return;
-
-      isLinkIconLoading = true;
+  function animateLinkIcon(timestamp) {
+    if (!isLinkIconLoading) {
+      linkGradientFrame = null;
       linkGradientLastTime = null;
-      linkGradientFrame = requestAnimationFrame(animateLinkIcon);
+      return;
     }
 
-    function stopLoadingAnimation() {
-      isLinkIconLoading = false;
-      linkGradientLastTime = null;
+    if (linkGradientLastTime !== null) {
+      const elapsed = timestamp - linkGradientLastTime;
 
-      if (linkGradientFrame !== null) {
-        cancelAnimationFrame(linkGradientFrame);
-        linkGradientFrame = null;
-      }
+      linkGradientAngle =
+        (linkGradientAngle +
+          elapsed * 360 / LINK_GRADIENT_DURATION) % 360;
     }
+
+    linkGradientLastTime = timestamp;
+
+    const gradient = document.getElementById('flowGradient');
+
+    if (gradient) {
+      gradient.setAttribute(
+        'gradientTransform',
+        `rotate(${linkGradientAngle} 40 20)`
+      );
+    }
+
+    linkGradientFrame = requestAnimationFrame(animateLinkIcon);
+  }
+
+  function startLoadingAnimation() {
+    if (isLinkIconLoading) return;
+
+    isLinkIconLoading = true;
+    linkGradientLastTime = null;
+    linkGradientFrame = requestAnimationFrame(animateLinkIcon);
+  }
+
+  function stopLoadingAnimation() {
+    isLinkIconLoading = false;
+    linkGradientLastTime = null;
+
+    if (linkGradientFrame !== null) {
+      cancelAnimationFrame(linkGradientFrame);
+      linkGradientFrame = null;
+    }
+  }
 
 
   // ---------- DOM elements ----------

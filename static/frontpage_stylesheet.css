@@ -527,11 +527,6 @@ input.shake { animation: shake 0.4s ease; border: 1px solid #D1495B; }
   border: 0;
 }
 
-/* Loading state - spinning animation */
-.link-icon.loading {
-  animation: spin 1s linear infinite;
-}
-
 /* Keyframe for spinning */
 @keyframes spin {
   from {

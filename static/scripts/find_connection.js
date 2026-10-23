@@ -35,24 +35,36 @@ console.log('SDOS main.js starting...');
   }
 
 
-  // ---------- Loading icon control ----------
-  function startLoadingAnimation() {
-    const linkIcon = document.getElementById('linkIcon');
-    if (linkIcon && linkIcon.contentDocument) {
-      const svgDoc = linkIcon.contentDocument;
-      const svg = svgDoc.querySelector('svg');
-      if (svg) svg.unpauseAnimations();
-    }
-  }
+// ---------- Loading icon control ----------
 
-  function stopLoadingAnimation() {
-    const linkIcon = document.getElementById('linkIcon');
-    if (linkIcon && linkIcon.contentDocument) {
-      const svgDoc = linkIcon.contentDocument;
-      const svg = svgDoc.querySelector('svg');
-      if (svg) svg.pauseAnimations();
+    let isLinkIconLoading = false;
+
+    function setLinkIconAnimation(shouldRun) {
+      const linkIcon = document.getElementById('linkIcon');
+      if (!linkIcon) return;
+
+      const svg = linkIcon.contentDocument?.querySelector('svg');
+      if (!svg) return;
+
+      if (shouldRun && typeof svg.unpauseAnimations === 'function') {
+        svg.unpauseAnimations();
+      } else if (
+        !shouldRun &&
+        typeof svg.pauseAnimations === 'function'
+      ) {
+        svg.pauseAnimations();
+      }
     }
-  }
+
+    function startLoadingAnimation() {
+      isLinkIconLoading = true;
+      setLinkIconAnimation(true);
+    }
+
+    function stopLoadingAnimation() {
+      isLinkIconLoading = false;
+      setLinkIconAnimation(false);
+    }
 
   function stopCurrentAudio() {
     const audio = window._sdos_audio;
@@ -1042,15 +1054,27 @@ if (sharedParams.has('artist1') && sharedParams.has('artist2')) {
   
 
   // Initialize SVG animation state (paused by default)
-  const linkIcon = document.getElementById('linkIcon');
-  if (linkIcon) {
-    linkIcon.addEventListener('load', function() {
-      if (this.contentDocument) {
-        const svg = this.contentDocument.querySelector('svg');
-        if (svg) svg.pauseAnimations();
-      }
-    });
+// Initialize the SVG animation without rotating the outer wrapper.
+const linkIcon = document.getElementById('linkIcon');
+
+if (linkIcon) {
+  function initializeLinkIconAnimation() {
+    const svg = linkIcon.contentDocument?.querySelector('svg');
+    if (!svg) return;
+
+    if (isLinkIconLoading) {
+      svg.unpauseAnimations();
+    } else {
+      svg.pauseAnimations();
+    }
   }
+
+  // Handle the icon loading after the page or search starts.
+  linkIcon.addEventListener('load', initializeLinkIconAnimation);
+
+  // Also handle the case where the SVG has already loaded.
+  initializeLinkIconAnimation();
+}
 
   console.log('SDOS main.js ready.');
 })();

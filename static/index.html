@@ -5,69 +5,65 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Six Degrees of Sound — SDOS</title>
   <link rel="icon" href="/static/images/favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/static/frontpage_stylesheet.css?v=20261023">
+  <link rel="stylesheet" href="/static/frontpage_stylesheet.css?v=20261023b">
 </head>
 <body>
   <div class="page">
     <a href="/" class="home-link" aria-label="Return to SDOS home">
-      <h1> Six Degrees of Sound </h1>
+      <h1>Six Degrees of Sound</h1>
     </a>
     <p>Link two artists using overlapping collaborations</p>
-
 
     <form id="connectionForm">
       <div class="input-container">
         <!-- Artist 1 -->
         <div class="input-wrapper">
-          <input id="artist1" type="text" placeholder="Artist 1" autocomplete="off" />
+          <input id="artist1" type="text" placeholder="Artist 1" aria-label="Artist 1" autocomplete="off" />
           <input id="artist1_id" type="hidden" name="artist1_id" />
         </div>
 
+        <!-- Link icon (gradient is animated by JS while loading) -->
+        <div class="link-icon" id="linkIconWrapper">
+          <svg
+            id="linkIcon"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 80 40"
+            width="44"
+            height="44"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient
+                id="flowGradient"
+                gradientUnits="userSpaceOnUse"
+                x1="0%"
+                y1="0%"
+                x2="100%"
+                y2="0%"
+                gradientTransform="rotate(0 40 20)"
+              >
+                <stop offset="0%" stop-color="#52aaed"/>
+                <stop offset="100%" stop-color="#e14141"/>
+              </linearGradient>
+            </defs>
 
-      <!-- Link icon -->
-      <div class="link-icon" id="linkIconWrapper">
-        <svg
-          id="linkIcon"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 80 40"
-          width="44"
-          height="44"
-          aria-hidden="true"
-        >
-          <defs>
-            <linearGradient
-              id="flowGradient"
-              gradientUnits="userSpaceOnUse"
-              x1="0%"
-              y1="0%"
-              x2="100%"
-              y2="0%"
-              gradientTransform="rotate(0 40 20)"
-            >
-              <stop offset="0%" stop-color="#52aaed"/>
-              <stop offset="100%" stop-color="#e14141"/>
-            </linearGradient>
-          </defs>
+            <rect
+              x="5"
+              y="10"
+              width="70"
+              height="20"
+              rx="8"
+              ry="8"
+              fill="none"
+              stroke="url(#flowGradient)"
+              stroke-width="6"
+            />
+          </svg>
+        </div>
 
-          <rect
-            x="5"
-            y="10"
-            width="70"
-            height="20"
-            rx="8"
-            ry="8"
-            fill="none"
-            stroke="url(#flowGradient)"
-            stroke-width="6"
-          />
-        </svg>
-      </div>
-
-        
-      
         <!-- Artist 2 -->
         <div class="input-wrapper">
-          <input id="artist2" type="text" placeholder="Artist 2" autocomplete="off" />
+          <input id="artist2" type="text" placeholder="Artist 2" aria-label="Artist 2" autocomplete="off" />
           <input id="artist2_id" type="hidden" name="artist2_id" />
         </div>
       </div>
@@ -76,9 +72,10 @@
         <button id="findBtn" type="submit">Find Connection</button>
       </div>
     </form>
+
     <div id="results"></div>
   </div>
 
-  <script src="/static/scripts/find_connection.js?v=20261023"></script>
+  <script src="/static/scripts/find_connection.js?v=20261023b"></script>
 </body>
 </html>

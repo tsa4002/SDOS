@@ -1,31 +1,13 @@
-
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 40" width="60" height="30">
   <defs>
-    <style>
-      @keyframes circleGradient {
-        from {
-          transform: rotate(0deg);
-        }
-        to {
-          transform: rotate(360deg);
-        }
-      }
-
-      .flow-gradient {
-        transform-box: view-box;
-        transform-origin: 40px 20px;
-        animation: circleGradient 0.5s linear infinite;
-      }
-    </style>
-
     <linearGradient
       id="flowGradient"
-      class="flow-gradient"
       gradientUnits="userSpaceOnUse"
-      x1="0"
-      y1="0"
-      x2="80"
-      y2="0"
+      x1="0%"
+      y1="0%"
+      x2="100%"
+      y2="0%"
+      gradientTransform="rotate(0 40 20)"
     >
       <stop offset="0%" stop-color="#52aaed"/>
       <stop offset="100%" stop-color="#e14141"/>

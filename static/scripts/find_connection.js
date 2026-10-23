@@ -37,51 +37,72 @@ console.log('SDOS main.js starting...');
 
 // ---------- Loading icon control ----------
 
+  // ---------- Loading icon control ----------
+
     let isLinkIconLoading = false;
+    let linkGradientFrame = null;
+    let linkGradientAngle = 0;
+    let linkGradientLastTime = null;
 
-    function setLinkIconAnimation(shouldRun) {
+    const LINK_GRADIENT_DURATION = 500;
+
+    function getLinkIconGradient() {
       const linkIcon = document.getElementById('linkIcon');
-      if (!linkIcon) return;
 
-      const svg = linkIcon.contentDocument?.querySelector('svg');
-      if (!svg) return;
+      if (!linkIcon) return null;
 
-      if (shouldRun && typeof svg.unpauseAnimations === 'function') {
-        svg.unpauseAnimations();
-      } else if (
-        !shouldRun &&
-        typeof svg.pauseAnimations === 'function'
-      ) {
-        svg.pauseAnimations();
+      try {
+        return linkIcon.contentDocument?.getElementById('flowGradient') || null;
+      } catch (error) {
+        return null;
       }
     }
 
+    function animateLinkIcon(timestamp) {
+      if (!isLinkIconLoading) {
+        linkGradientFrame = null;
+        linkGradientLastTime = null;
+        return;
+      }
+
+      if (linkGradientLastTime !== null) {
+        const elapsed = timestamp - linkGradientLastTime;
+        linkGradientAngle =
+          (linkGradientAngle + elapsed * 360 / LINK_GRADIENT_DURATION) % 360;
+      }
+
+      linkGradientLastTime = timestamp;
+
+      const gradient = getLinkIconGradient();
+
+      if (gradient) {
+        gradient.setAttribute(
+          'gradientTransform',
+          `rotate(${linkGradientAngle} 40 20)`
+        );
+      }
+
+      linkGradientFrame = requestAnimationFrame(animateLinkIcon);
+    }
+
     function startLoadingAnimation() {
+      if (isLinkIconLoading) return;
+
       isLinkIconLoading = true;
-      setLinkIconAnimation(true);
+      linkGradientLastTime = null;
+      linkGradientFrame = requestAnimationFrame(animateLinkIcon);
     }
 
     function stopLoadingAnimation() {
       isLinkIconLoading = false;
-      setLinkIconAnimation(false);
+      linkGradientLastTime = null;
+
+      if (linkGradientFrame !== null) {
+        cancelAnimationFrame(linkGradientFrame);
+        linkGradientFrame = null;
+      }
     }
 
-  function stopCurrentAudio() {
-    const audio = window._sdos_audio;
-    if (!audio) return;
-    if (!audio.paused) audio.pause();
-    audio.currentTime = 0;
-    if (window._sdos_currentAnim) cancelAnimationFrame(window._sdos_currentAnim);
-    window._sdos_currentAnim = null;
-    window._sdos_currentBtn = null;
-  }
-
-  function updateIcon(btn, state) {
-    const img = btn.querySelector('img');
-    if (!img) return;
-    img.src = state === 'play' ? '/static/images/play_button.png' : '/static/images/pause_button.png';
-    btn.setAttribute('aria-pressed', state === 'pause' ? 'true' : 'false');
-  }
 
   // ---------- DOM elements ----------
   const a1 = document.getElementById('artist1');
@@ -1052,29 +1073,5 @@ if (sharedParams.has('artist1') && sharedParams.has('artist2')) {
   loadSharedRoute();
 }
   
-
-  // Initialize SVG animation state (paused by default)
-// Initialize the SVG animation without rotating the outer wrapper.
-const linkIcon = document.getElementById('linkIcon');
-
-if (linkIcon) {
-  function initializeLinkIconAnimation() {
-    const svg = linkIcon.contentDocument?.querySelector('svg');
-    if (!svg) return;
-
-    if (isLinkIconLoading) {
-      svg.unpauseAnimations();
-    } else {
-      svg.pauseAnimations();
-    }
-  }
-
-  // Handle the icon loading after the page or search starts.
-  linkIcon.addEventListener('load', initializeLinkIconAnimation);
-
-  // Also handle the case where the SVG has already loaded.
-  initializeLinkIconAnimation();
-}
-
   console.log('SDOS main.js ready.');
 })();

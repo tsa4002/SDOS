@@ -1,4 +1,4 @@
-// static/js/main.js
+// static/js/find_connection.js
 // SDOS frontend main script - forced smooth scroll to absolute top with aggressive writes
 console.log('SDOS main.js starting...');
 
@@ -679,7 +679,7 @@ function setupAutocompleteFor(inputEl, dropdownEl) {
     attachCoverTilt();
 
     const refreshBtn = document.getElementById('refreshBtn');
-    if (refreshBtn) refreshBtn.addEventListener('click', () => window.location.reload());
+    if (refreshBtn) refreshBtn.addEventListener('click', () => window.location.href = '/');
     const tryBtn = document.getElementById('tryAgainBtn');
 
     if (tryBtn) {

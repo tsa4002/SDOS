@@ -7,9 +7,9 @@
   const PLAY_ICON = '/static/images/play_button.png';
   const PAUSE_ICON = '/static/images/pause_button.png';
 
-  const RESULTS_SCROLL_OFFSET = 72;   // px of breathing room above results when scrolling
-  const LINK_GRADIENT_DURATION = 500; // ms per full rotation of the loading gradient
-  const FADE_STEP_DELAY = 400;        // ms stagger between route steps
+  const RESULTS_SCROLL_OFFSET = 72;
+  const LINK_GRADIENT_DURATION = 2500;
+  const FADE_STEP_DELAY = 400;
 
   const HTML_ESCAPES = {
     '&': '&amp;',
@@ -22,7 +22,10 @@
   // ---------- Utilities ----------
   function debounce(fn, wait = 300) {
     let t;
-    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), wait);
+    };
   }
 
   function escapeHtml(s) {
@@ -31,6 +34,7 @@
 
   function shakeElement(el) {
     if (!el) return;
+
     el.classList.add('shake');
     setTimeout(() => el.classList.remove('shake'), 420);
   }
@@ -46,8 +50,13 @@
   }
 
   function buildServiceUrls(track, fromName, toName) {
-    const query = encodeURIComponent([track, fromName, toName].filter(Boolean).join(' '));
-    const mbQuery = encodeURIComponent(`recording:${track} AND artist:${fromName}`);
+    const query = encodeURIComponent(
+      [track, fromName, toName].filter(Boolean).join(' ')
+    );
+
+    const mbQuery = encodeURIComponent(
+      `recording:${track} AND artist:${fromName}`
+    );
 
     return {
       musicbrainz: `https://musicbrainz.org/search?query=${mbQuery}&type=recording`,
@@ -57,91 +66,173 @@
     };
   }
 
-  // ---------- Loading icon (animated gradient on the link icon) ----------
-  const flowGradient = document.getElementById('flowGradient');
+  // ---------- Loading icon ----------
+  // Two colored segments move around the fixed loop in the SVG.
+  const flowBlueSegment = document.getElementById('flowBlueSegment');
+  const flowRedSegment = document.getElementById('flowRedSegment');
+
+  const LINK_ALIGNMENT_TOLERANCE = 1;
+
   let isLinkIconLoading = false;
-  let linkGradientFrame = null;
-  let linkGradientAngle = 0;
-  let linkGradientLastTime = null;
+  let linkAnimationFrame = null;
+  let linkAnimationStartTime = null;
+  let linkAnimationStartPhase = 0;
+  let linkAnimationPhase = 0;
+  let linkAnimationFinishResolver = null;
+  let linkAnimationFinishPromise = null;
+
+  function applyLinkIconPhase(phase) {
+    if (flowBlueSegment) {
+      flowBlueSegment.setAttribute(
+        'stroke-dashoffset',
+        String(-50 - phase)
+      );
+    }
+
+    if (flowRedSegment) {
+      flowRedSegment.setAttribute(
+        'stroke-dashoffset',
+        String(-phase)
+      );
+    }
+  }
+
+  function isAcceptedLinkPhase(phase) {
+    const distanceToStart = Math.min(phase, 100 - phase);
+    const distanceToOpposite = Math.abs(phase - 50);
+
+    return Math.min(distanceToStart, distanceToOpposite)
+      <= LINK_ALIGNMENT_TOLERANCE;
+  }
 
   function animateLinkIcon(timestamp) {
     if (!isLinkIconLoading) {
-      linkGradientFrame = null;
-      linkGradientLastTime = null;
+      linkAnimationFrame = null;
+      linkAnimationStartTime = null;
       return;
     }
 
-    if (linkGradientLastTime !== null) {
-      const elapsed = timestamp - linkGradientLastTime;
-      linkGradientAngle = (linkGradientAngle + elapsed * 360 / LINK_GRADIENT_DURATION) % 360;
+    if (linkAnimationStartTime === null) {
+      linkAnimationStartTime = timestamp;
     }
 
-    linkGradientLastTime = timestamp;
+    const elapsed = timestamp - linkAnimationStartTime;
 
-    if (flowGradient) {
-      flowGradient.setAttribute('gradientTransform', `rotate(${linkGradientAngle} 40 20)`);
+    linkAnimationPhase =
+      (linkAnimationStartPhase +
+        elapsed * 100 / LINK_GRADIENT_DURATION) % 100;
+
+    applyLinkIconPhase(linkAnimationPhase);
+
+    // Once loading is finished, continue until either accepted orientation.
+    // Stop in place. Never snap the icon back to its starting position.
+    if (
+      linkAnimationFinishResolver &&
+      isAcceptedLinkPhase(linkAnimationPhase)
+    ) {
+      isLinkIconLoading = false;
+      linkAnimationFrame = null;
+      linkAnimationStartTime = null;
+      linkAnimationStartPhase = linkAnimationPhase;
+
+      const resolve = linkAnimationFinishResolver;
+
+      linkAnimationFinishResolver = null;
+      linkAnimationFinishPromise = null;
+
+      // The icon has stopped. Result insertion and scrolling happen afterward.
+      resolve();
+      return;
     }
 
-    linkGradientFrame = requestAnimationFrame(animateLinkIcon);
+    linkAnimationFrame = requestAnimationFrame(animateLinkIcon);
   }
 
   function startLoadingAnimation() {
+    // Keep existing results hidden but in the layout while searching.
+    // This prevents them from shifting the page during the animation.
+    if (resultsEl) {
+      resultsEl.style.visibility = 'hidden';
+    }
+
     if (isLinkIconLoading) return;
 
     isLinkIconLoading = true;
-    linkGradientLastTime = null;
-    linkGradientFrame = requestAnimationFrame(animateLinkIcon);
+    linkAnimationStartTime = null;
+    linkAnimationStartPhase = linkAnimationPhase;
+
+    linkAnimationFrame = requestAnimationFrame(animateLinkIcon);
   }
 
   function stopLoadingAnimation() {
-    isLinkIconLoading = false;
-    linkGradientLastTime = null;
-
-    if (linkGradientFrame !== null) {
-      cancelAnimationFrame(linkGradientFrame);
-      linkGradientFrame = null;
+    if (!isLinkIconLoading) {
+      return Promise.resolve();
     }
+
+    // Use one promise if multiple callers request the animation to stop.
+    if (linkAnimationFinishPromise) {
+      return linkAnimationFinishPromise;
+    }
+
+    linkAnimationFinishPromise = new Promise((resolve) => {
+      linkAnimationFinishResolver = resolve;
+    });
+
+    return linkAnimationFinishPromise;
   }
+
+  // Initial idle state: blue on the left and red on the right.
+  applyLinkIconPhase(linkAnimationPhase);
 
   // ---------- DOM elements ----------
   const a1 = document.getElementById('artist1');
   const a2 = document.getElementById('artist2');
   const hid1 = document.getElementById('artist1_id');
   const hid2 = document.getElementById('artist2_id');
+
   const img1 = document.getElementById('selected-artist1-img');
   const img2 = document.getElementById('selected-artist2-img');
+
   const resultsEl = document.getElementById('results');
   const findBtn = document.getElementById('findBtn');
   const form = document.getElementById('connectionForm');
 
-  // Create the autocomplete dropdowns if the HTML doesn't include them
+  // Create autocomplete dropdowns if the HTML doesn't include them.
   function ensureDropdown(id, inputEl) {
     let dropdown = document.getElementById(id);
+
     if (!dropdown && inputEl && inputEl.parentElement) {
       dropdown = document.createElement('div');
       dropdown.id = id;
       dropdown.className = 'autocomplete-dropdown';
       dropdown.style.display = 'none';
+
       inputEl.parentElement.appendChild(dropdown);
     }
+
     return dropdown;
   }
 
   const dropdown1 = ensureDropdown('dropdown1', a1);
   const dropdown2 = ensureDropdown('dropdown2', a2);
 
-  // ---------- Cover + preview lookup (cached) ----------
+  // ---------- Cover + preview lookup ----------
   const coverCache = new Map();
 
   async function fetchTrackInfo(trackName, artist1, artist2) {
-    if (!trackName) return { cover: null, preview: null };
+    if (!trackName) {
+      return { cover: null, preview: null };
+    }
 
     const artists = [artist1, artist2].filter(Boolean).sort();
+
     const key =
       `${normalizeMusicText(trackName)}||` +
       artists.map(normalizeMusicText).join('||');
 
-    if (coverCache.has(key)) return coverCache.get(key);
+    if (coverCache.has(key)) {
+      return coverCache.get(key);
+    }
 
     const none = { cover: null, preview: null };
 
@@ -161,6 +252,7 @@
       }
 
       const data = await response.json();
+
       const result = {
         cover: data.cover || null,
         preview: data.preview || null
@@ -168,6 +260,7 @@
 
       coverCache.set(key, result);
       return result;
+
     } catch (error) {
       console.debug('Cover lookup failed:', error);
       coverCache.set(key, none);
@@ -178,13 +271,19 @@
   // ---------- Search / Autocomplete ----------
   async function doSearch(q) {
     if (!q || !q.trim()) return [];
+
     try {
-      const res = await fetch('/api/search?q=' + encodeURIComponent(q) + '&limit=10');
+      const res = await fetch(
+        '/api/search?q=' + encodeURIComponent(q) + '&limit=10'
+      );
+
       if (!res.ok) {
         console.error('/api/search failed', res.status);
         return [];
       }
+
       return await res.json();
+
     } catch (err) {
       console.error('Search error', err);
       return [];
@@ -193,6 +292,7 @@
 
   function renderDropdown(dropdownEl, items, inputEl) {
     dropdownEl.innerHTML = '';
+
     if (!items || items.length === 0) {
       dropdownEl.style.display = 'none';
       return;
@@ -201,6 +301,7 @@
     items.forEach((it) => {
       const div = document.createElement('div');
       div.className = 'autocomplete-item';
+
       const mbidText = it.gid
         ? 'MBID: ' + escapeHtml(String(it.gid))
         : 'ID: ' + escapeHtml(String(it.id));
@@ -213,15 +314,17 @@
         </div>
       `;
 
-      // mousedown (not click) so it fires before the input's blur hides the dropdown
+      // mousedown fires before blur hides the dropdown.
       div.addEventListener('mousedown', (ev) => {
         ev.preventDefault();
+
         inputEl.value = it.name;
 
         const hid = document.getElementById(inputEl.id + '_id');
         if (hid) hid.value = it.id;
 
         const thumb = inputEl.id === 'artist1' ? img1 : img2;
+
         if (thumb && it.image) {
           thumb.src = it.image;
           thumb.style.display = 'block';
@@ -249,13 +352,15 @@
       if (!q) {
         dropdownEl.innerHTML = '';
         dropdownEl.style.display = 'none';
+
         if (hid) hid.value = '';
+
         return;
       }
 
       const rows = await doSearch(q);
 
-      // Ignore results from an older search, or if the input has since changed.
+      // Ignore old responses or responses for text that has since changed.
       if (version !== searchVersion) return;
       if (q !== inputEl.value.trim()) return;
 
@@ -263,19 +368,23 @@
     }, 200);
 
     inputEl.addEventListener('input', () => {
-      // Invalidate any search already in progress.
       searchVersion++;
 
       // Typing invalidates the previously selected artist.
       if (hid) hid.value = '';
 
-      const thumb = inputEl.id === 'artist1' ? img1 : inputEl.id === 'artist2' ? img2 : null;
+      const thumb =
+        inputEl.id === 'artist1'
+          ? img1
+          : inputEl.id === 'artist2'
+            ? img2
+            : null;
+
       if (thumb) {
         thumb.style.display = 'none';
         thumb.src = '';
       }
 
-      // Don't show outdated results while waiting for the new search.
       dropdownEl.style.display = 'none';
       deb();
     });
@@ -287,28 +396,86 @@
     });
 
     inputEl.addEventListener('blur', () => {
-      setTimeout(() => { dropdownEl.style.display = 'none'; }, 150);
+      setTimeout(() => {
+        dropdownEl.style.display = 'none';
+      }, 150);
     });
   }
 
-  // Hide dropdowns when clicking outside (iOS Safari doesn't always blur inputs on tap)
+  // Hide dropdowns when clicking outside.
   document.addEventListener('click', (ev) => {
     [dropdown1, dropdown2].forEach((dd) => {
       if (!dd) return;
+
       const wrapper = dd.parentElement;
-      const input = wrapper && wrapper.querySelector('input[type="text"]');
-      if (input && !wrapper.contains(ev.target)) dd.style.display = 'none';
+      const input = wrapper &&
+        wrapper.querySelector('input[type="text"]');
+
+      if (input && !wrapper.contains(ev.target)) {
+        dd.style.display = 'none';
+      }
     });
   });
 
   // ---------- Scrolling ----------
+  // Returns a promise so the result reveal can wait until scrolling finishes.
   function scrollToElementWithOffset(el, offset, behavior = 'smooth') {
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    window.scrollTo({ top: window.scrollY + rect.top - offset, behavior });
+    if (!el) return Promise.resolve();
+
+    const targetY = Math.max(
+      0,
+      window.scrollY + el.getBoundingClientRect().top - offset
+    );
+
+    if (behavior !== 'smooth') {
+      window.scrollTo(0, targetY);
+      return Promise.resolve();
+    }
+
+    const startY = window.scrollY;
+    const distance = targetY - startY;
+
+    if (Math.abs(distance) < 2) {
+      return Promise.resolve();
+    }
+
+    const duration = Math.min(
+      650,
+      Math.max(280, Math.abs(distance) * 0.45)
+    );
+
+    const startTime = performance.now();
+
+    return new Promise((resolve) => {
+      function step(now) {
+        const progress = Math.min(
+          1,
+          (now - startTime) / duration
+        );
+
+        const eased = progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+        window.scrollTo(
+          0,
+          startY + distance * eased
+        );
+
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          window.scrollTo(0, targetY);
+          resolve();
+        }
+      }
+
+      requestAnimationFrame(step);
+    });
   }
 
-  // Smoothly scrolls every scrollable root (window, html, body, scrollable containers) to the top.
+  // Smoothly scroll every scrollable root to the top.
+  // Kept available for other navigation behavior.
   function glideToTop(duration = 450) {
     return new Promise((resolve) => {
       const scrollTargets = new Set([
@@ -320,6 +487,7 @@
 
       document.querySelectorAll('*').forEach((el) => {
         const style = window.getComputedStyle(el);
+
         if (
           el.scrollHeight > el.clientHeight + 1 &&
           ['auto', 'scroll', 'hidden', 'overlay'].includes(style.overflowY)
@@ -357,9 +525,11 @@
       }
 
       function step(now) {
-        const progress = Math.min(1, (now - startTime) / duration);
+        const progress = Math.min(
+          1,
+          (now - startTime) / duration
+        );
 
-        // Ease in and out for a natural glide.
         const eased = progress < 0.5
           ? 4 * progress * progress * progress
           : 1 - Math.pow(-2 * progress + 2, 3) / 2;
@@ -398,50 +568,70 @@
 
   function pathToPairsString(path) {
     if (!Array.isArray(path) || path.length === 0) return '';
-    return path.map((s) => `${s.from_id || ''}->${s.to_id || ''}`).join('|');
+
+    return path
+      .map((s) => `${s.from_id || ''}->${s.to_id || ''}`)
+      .join('|');
   }
 
-  // Every edge used by any route found so far (sent to the server as exclusions).
+  // Every edge used by any route found so far.
   function unionEdgesFromFoundRoutes() {
     const set = new Set();
+
     foundRoutes.forEach((route) => {
       (route.path || []).forEach((step) => {
         const a = parseInt(step.from_id, 10);
         const b = parseInt(step.to_id, 10);
+
         if (!isNaN(a) && !isNaN(b)) {
           set.add(a < b ? `${a},${b}` : `${b},${a}`);
         }
       });
     });
-    return Array.from(set).map((s) => s.split(',').map((x) => parseInt(x, 10)));
+
+    return Array.from(set).map((s) =>
+      s.split(',').map((x) => parseInt(x, 10))
+    );
   }
 
   // ---------- Audio previews ----------
   const audio = new Audio();
   audio.preload = 'auto';
+
   let currentBtn = null;
   let currentAnim = null;
 
   function getRing(btn) {
     const container = btn && btn.closest('.play-button-container');
-    return container ? container.querySelector('.progress-circle') : null;
+
+    return container
+      ? container.querySelector('.progress-circle')
+      : null;
   }
 
-  // Keeps the button, its icon, aria state, and progress ring in sync.
+  // Keep the button, icon, aria state, and progress ring synchronized.
   function setButtonState(btn, playing) {
     if (!btn) return;
 
     btn.classList.toggle('is-playing', playing);
     btn.setAttribute('aria-pressed', String(playing));
-    btn.setAttribute('aria-label', playing ? 'Pause preview' : 'Play preview');
+    btn.setAttribute(
+      'aria-label',
+      playing ? 'Pause preview' : 'Play preview'
+    );
 
     const icon = btn.querySelector('.play-icon');
+
     if (icon) {
       icon.alt = playing ? 'Pause' : 'Play';
-      if (PAUSE_ICON) icon.src = playing ? PAUSE_ICON : PLAY_ICON;
+
+      if (PAUSE_ICON) {
+        icon.src = playing ? PAUSE_ICON : PLAY_ICON;
+      }
     }
 
     const ring = getRing(btn);
+
     if (ring) {
       ring.style.opacity = playing ? '1' : '0';
       ring.classList.toggle('is-playing', playing);
@@ -449,11 +639,18 @@
   }
 
   function updateProgress() {
-    if (!currentBtn || !audio.duration || isNaN(audio.duration)) return;
+    if (!currentBtn || !audio.duration || isNaN(audio.duration)) {
+      return;
+    }
+
     const ring = getRing(currentBtn);
     if (!ring) return;
 
-    const pct = Math.max(0, Math.min(1, audio.currentTime / audio.duration)) * 100;
+    const pct = Math.max(
+      0,
+      Math.min(1, audio.currentTime / audio.duration)
+    ) * 100;
+
     ring.style.background =
       `conic-gradient(rgba(255,255,255,0.73) ${pct}%, transparent ${pct}%)`;
   }
@@ -463,12 +660,16 @@
       cancelAnimationFrame(currentAnim);
       return;
     }
+
     updateProgress();
     currentAnim = requestAnimationFrame(animLoop);
   }
 
   function stopCurrentAudio() {
-    if (!audio.paused) audio.pause();
+    if (!audio.paused) {
+      audio.pause();
+    }
+
     audio.currentTime = 0;
 
     cancelAnimationFrame(currentAnim);
@@ -480,8 +681,10 @@
 
   audio.addEventListener('ended', () => {
     if (!currentBtn) return;
+
     setButtonState(currentBtn, false);
     cancelAnimationFrame(currentAnim);
+
     currentBtn = null;
   });
 
@@ -496,15 +699,21 @@
         setButtonState(btn, false);
         cancelAnimationFrame(currentAnim);
       } else {
-        await audio.play().catch((e) => console.error('resume failed', e));
+        await audio.play().catch((e) => {
+          console.error('resume failed', e);
+        });
+
         setButtonState(btn, true);
         currentAnim = requestAnimationFrame(animLoop);
       }
+
       return;
     }
 
     // Different button: reset the previous one, then start this one.
-    if (currentBtn) setButtonState(currentBtn, false);
+    if (currentBtn) {
+      setButtonState(currentBtn, false);
+    }
 
     currentBtn = btn;
     audio.src = preview;
@@ -523,19 +732,60 @@
   }
 
   // ---------- Rendering ----------
-  // Fade steps in one after another. Also used after renders that skipped the animation.
+  // Fade steps in one after another.
   function animateFadeIn() {
     if (!resultsEl) return;
-    const steps = Array.from(resultsEl.querySelectorAll('.fade-step'));
+
+    const steps = Array.from(
+      resultsEl.querySelectorAll('.fade-step')
+    );
+
     steps.forEach((el) => el.classList.remove('visible'));
+
     steps.forEach((el, i) => {
       setTimeout(() => el.classList.add('visible'), i * FADE_STEP_DELAY);
     });
   }
 
-  // 3D album-cover tilt (hover-capable devices only)
+  // Called only after the icon has stopped at an accepted orientation.
+  // Insert the results while hidden, scroll into position, then reveal them.
+  async function revealResultsAfterLoading(html) {
+    if (!resultsEl) return;
+
+    if (typeof html === 'string') {
+      resultsEl.innerHTML = html;
+    }
+
+    resultsEl.style.visibility = 'hidden';
+
+    attachCoverTilt();
+
+    // Let the browser calculate the new layout before measuring the route.
+    await new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(resolve);
+      });
+    });
+
+    const firstStep = resultsEl.querySelector('.connection-step');
+
+    if (firstStep) {
+      await scrollToElementWithOffset(
+        firstStep,
+        RESULTS_SCROLL_OFFSET
+      );
+    }
+
+    resultsEl.style.visibility = '';
+    animateFadeIn();
+  }
+
+  // 3D album-cover tilt on hover-capable devices.
   function attachCoverTilt() {
-    const supportsHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const supportsHover = window.matchMedia(
+      '(hover: hover) and (pointer: fine)'
+    ).matches;
+
     if (!supportsHover || !resultsEl) return;
 
     const maxTilt = 18;
@@ -544,11 +794,10 @@
       wrapper.addEventListener('pointermove', (event) => {
         const rect = wrapper.getBoundingClientRect();
 
-        // Normalize cursor position from -1 to +1.
         const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         const y = ((event.clientY - rect.top) / rect.height) * 2 - 1;
 
-        // Reversed so the corner under the cursor dips away from the viewer.
+        // Reverse so the corner under the cursor dips away from the viewer.
         wrapper.style.setProperty('--tilt-x', `${-y * maxTilt}deg`);
         wrapper.style.setProperty('--tilt-y', `${x * maxTilt}deg`);
       });
@@ -575,8 +824,14 @@
          </div>`;
 
     let services = '';
+
     if (s.track) {
-      const urls = buildServiceUrls(s.track, s.from_name || '', s.to_name || '');
+      const urls = buildServiceUrls(
+        s.track,
+        s.from_name || '',
+        s.to_name || ''
+      );
+
       services = `
         <div class="music-services">
           <img src="/static/images/music-brainz-icon.svg" alt="MusicBrainz" class="service-icon mb" data-url="${escapeHtml(urls.musicbrainz)}" />
@@ -613,28 +868,53 @@
       </footer>`;
   }
 
-  async function renderPathWithCovers(serverPath, animate = true) {
+  async function renderPathWithCovers(
+    serverPath,
+    animate = true,
+    deferInsert = false
+  ) {
     const enriched = await Promise.all(
       serverPath.map(async (step, idx) => {
         const info = step.track
-          ? await fetchTrackInfo(step.track, step.from_name || '', step.to_name || '')
+          ? await fetchTrackInfo(
+              step.track,
+              step.from_name || '',
+              step.to_name || ''
+            )
           : { cover: null, preview: null };
 
-        return { ...step, cover: info.cover, preview: info.preview, stepNumber: idx + 1 };
+        return {
+          ...step,
+          cover: info.cover,
+          preview: info.preview,
+          stepNumber: idx + 1
+        };
       })
     );
 
+    const html =
+      `<div class="path-container">${enriched.map(buildStepHtml).join('')}</div>` +
+      buildFooterHtml();
+
+    // During a search, prepare markup off-page so it cannot shift the layout.
+    if (deferInsert) {
+      return html;
+    }
+
     if (resultsEl) {
-      resultsEl.innerHTML =
-        `<div class="path-container">${enriched.map(buildStepHtml).join('')}</div>` +
-        buildFooterHtml();
+      resultsEl.innerHTML = html;
     }
 
     attachCoverTilt();
-    if (animate) animateFadeIn();
+
+    if (animate) {
+      animateFadeIn();
+    }
+
+    return html;
   }
 
-  // ---------- Results actions (handled by one delegated click listener) ----------
+  // ---------- Results actions ----------
   async function shareRoute() {
     const artistA = a1 ? a1.value.trim() : '';
     const artistB = a2 ? a2.value.trim() : '';
@@ -646,16 +926,26 @@
 
     const shareTitle = `What connects ${artistA} with ${artistB}?`;
 
-    const shareUrl = new URL(window.location.origin + window.location.pathname);
+    const shareUrl = new URL(
+      window.location.origin + window.location.pathname
+    );
+
     shareUrl.searchParams.set('artist1', artistA);
     shareUrl.searchParams.set('artist2', artistB);
+
     const url = shareUrl.toString();
 
     if (navigator.share) {
       try {
-        await navigator.share({ title: shareTitle, text: shareTitle, url });
+        await navigator.share({
+          title: shareTitle,
+          text: shareTitle,
+          url
+        });
       } catch (error) {
-        if (error.name !== 'AbortError') console.error('Sharing failed:', error);
+        if (error.name !== 'AbortError') {
+          console.error('Sharing failed:', error);
+        }
       }
     } else {
       try {
@@ -669,8 +959,13 @@
 
   async function showNextFoundRoute() {
     cycleIndex = (cycleIndex + 1) % foundRoutes.length;
-    await renderPathWithCovers(foundRoutes[cycleIndex].path, false);
-    animateFadeIn();
+
+    // Return route markup without updating the page while the icon is spinning.
+    return renderPathWithCovers(
+      foundRoutes[cycleIndex].path,
+      false,
+      true
+    );
   }
 
   async function tryAnotherRoute() {
@@ -683,71 +978,115 @@
     }
 
     const exclude_edges = unionEdgesFromFoundRoutes();
+    let pendingResultsHtml = null;
 
     startLoadingAnimation();
-    if (findBtn) findBtn.disabled = true;
+
+    if (findBtn) {
+      findBtn.disabled = true;
+    }
 
     try {
       const last = foundRoutes[foundRoutes.length - 1];
+
       const source = parseInt(last.path[0].from_id, 10);
-      const target = parseInt(last.path[last.path.length - 1].to_id, 10);
+      const target = parseInt(
+        last.path[last.path.length - 1].to_id,
+        10
+      );
 
       const resp = await fetch('/api/path', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source_id: source, target_id: target, exclude_edges })
+        body: JSON.stringify({
+          source_id: source,
+          target_id: target,
+          exclude_edges
+        })
       });
 
       if (!resp.ok) {
         let err = 'Error attempting alternative route';
+
         try {
           const j = await resp.json();
           err = j.detail || j.error || err;
-        } catch (e) { /* keep default message */ }
-        if (resultsEl) resultsEl.innerHTML = `<div class="results-header">${escapeHtml(err)}</div>`;
+        } catch (e) {
+          // Keep the default error.
+        }
+
+        pendingResultsHtml =
+          `<div class="results-header">${escapeHtml(err)}</div>`;
+
         return;
       }
 
       const data = await resp.json();
 
-      // No new route exists: cycle back through the ones already found.
+      // No new route exists, so cycle through the routes already found.
       if (!data.found) {
-        await showNextFoundRoute();
+        pendingResultsHtml = await showNextFoundRoute();
         return;
       }
 
-      // The server returned a route we've already shown: cycle instead.
+      // If the server returns a route we've already shown, cycle instead.
       const newPairs = pathToPairsString(data.path || []);
-      if (foundRoutes.some((r) => pathToPairsString(r.path) === newPairs)) {
-        await showNextFoundRoute();
+
+      if (
+        foundRoutes.some(
+          (r) => pathToPairsString(r.path) === newPairs
+        )
+      ) {
+        pendingResultsHtml = await showNextFoundRoute();
         return;
       }
 
       const normalized = normalizePath(data.path);
+
       foundRoutes.push({ path: normalized });
       cycleIndex = foundRoutes.length - 1;
-      await renderPathWithCovers(normalized, false);
-      animateFadeIn();
+
+      // Fetch cover art and previews without inserting the route into the page.
+      pendingResultsHtml = await renderPathWithCovers(
+        normalized,
+        false,
+        true
+      );
 
     } catch (err) {
       console.error('tryAnotherRoute error', err);
-      if (resultsEl) resultsEl.innerHTML = '<div class="results-header">Unexpected error finding alternative route</div>';
+
+      pendingResultsHtml =
+        '<div class="results-header">Unexpected error finding alternative route</div>';
+
     } finally {
-      stopLoadingAnimation();
-      if (findBtn) findBtn.disabled = false;
+      // Order matters: stop the icon, insert the route, scroll, then reveal it.
+      await stopLoadingAnimation();
+
+      await revealResultsAfterLoading(
+        pendingResultsHtml ||
+        '<div class="results-header">Unable to display results.</div>'
+      );
+
+      if (findBtn) {
+        findBtn.disabled = false;
+      }
     }
   }
 
   async function handleTryAnother() {
-    // Glide to the top first, then search once scrolling finishes.
+    // Scroll back to the artist inputs and loading icon first.
     await glideToTop(850);
-    tryAnotherRoute();
+
+    // Then start searching for another route.
+    await tryAnotherRoute();
   }
 
   function handleResultsClick(ev) {
     const target = ev.target;
 
     const playBtn = target.closest('.play-button');
+
     if (playBtn) {
       ev.preventDefault();
       togglePreview(playBtn);
@@ -755,6 +1094,7 @@
     }
 
     const serviceIcon = target.closest('.service-icon');
+
     if (serviceIcon && serviceIcon.dataset.url) {
       window.open(serviceIcon.dataset.url, '_blank', 'noopener');
       return;
@@ -773,15 +1113,43 @@
   if (form) {
     form.addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      if (resultsEl) resultsEl.innerHTML = '';
 
       if (!hid1 || !hid2) return;
-      if (!hid1.value) { shakeElement(a1); a1.focus(); return; }
-      if (!hid2.value) { shakeElement(a2); a2.focus(); return; }
+
+      if (!hid1.value) {
+        shakeElement(a1);
+        a1.focus();
+        return;
+      }
+
+      if (!hid2.value) {
+        shakeElement(a2);
+        a2.focus();
+        return;
+      }
 
       stopCurrentAudio();
+
+      // If a route is already displayed, remove that old route from the layout
+      // before starting another Find Connection search. This lets the search
+      // interface return to its centered layout without changing scroll behavior.
+      // Try Another Route uses a separate handler and is intentionally unchanged.
+      const previousRouteWasDisplayed = Boolean(
+        resultsEl && resultsEl.querySelector('.connection-step')
+      );
+
+      if (previousRouteWasDisplayed) {
+        resultsEl.innerHTML = '';
+        resultsEl.style.visibility = '';
+      }
+
       startLoadingAnimation();
-      if (findBtn) findBtn.disabled = true;
+
+      if (findBtn) {
+        findBtn.disabled = true;
+      }
+
+      let pendingResultsHtml = null;
 
       try {
         const payload = {
@@ -797,18 +1165,26 @@
 
         if (!resp.ok) {
           let errText = 'Error finding connection.';
+
           try {
             const j = await resp.json();
             errText = j.detail || j.error || errText;
-          } catch (e) { /* keep default message */ }
-          if (resultsEl) resultsEl.innerHTML = `<div class="results-header">${escapeHtml(errText)}</div>`;
+          } catch (e) {
+            // Keep the default error.
+          }
+
+          pendingResultsHtml =
+            `<div class="results-header">${escapeHtml(errText)}</div>`;
+
           return;
         }
 
         const data = await resp.json();
 
         if (!data.found) {
-          if (resultsEl) resultsEl.innerHTML = '<div class="results-header">No connection found!</div>';
+          pendingResultsHtml =
+            '<div class="results-header">No connection found!</div>';
+
           return;
         }
 
@@ -816,17 +1192,34 @@
         cycleIndex = 0;
 
         const normalized = normalizePath(data.path);
+
         foundRoutes.push({ path: normalized });
 
-        await renderPathWithCovers(normalized, true);
-        scrollToElementWithOffset(resultsEl.querySelector('.connection-step'), RESULTS_SCROLL_OFFSET);
+        // Prepare the route and fetch covers while leaving the current layout intact.
+        pendingResultsHtml = await renderPathWithCovers(
+          normalized,
+          false,
+          true
+        );
 
       } catch (err) {
         console.error('Submit error', err);
-        if (resultsEl) resultsEl.innerHTML = '<div class="results-header">Unexpected error - check console</div>';
+
+        pendingResultsHtml =
+          '<div class="results-header">Unexpected error - check console</div>';
+
       } finally {
-        stopLoadingAnimation();
-        if (findBtn) findBtn.disabled = false;
+        // First wait until the icon has stopped, then adjust the page and reveal.
+        await stopLoadingAnimation();
+
+        await revealResultsAfterLoading(
+          pendingResultsHtml ||
+          '<div class="results-header">Unable to display results.</div>'
+        );
+
+        if (findBtn) {
+          findBtn.disabled = false;
+        }
       }
     });
   }
@@ -834,22 +1227,39 @@
   // ---------- Shared links (?artist1=...&artist2=...) ----------
   async function findExactArtist(name) {
     const matches = await doSearch(name);
-    return matches.find((artist) => artist.name.toLowerCase() === name.toLowerCase());
+
+    return matches.find(
+      (artist) => artist.name.toLowerCase() === name.toLowerCase()
+    );
   }
 
   async function loadSharedRoute() {
     const params = new URLSearchParams(window.location.search);
+
     const artistA = params.get('artist1');
     const artistB = params.get('artist2');
 
-    if (!artistA || !artistB || !a1 || !a2 || !hid1 || !hid2 || !form) return;
+    if (
+      !artistA ||
+      !artistB ||
+      !a1 ||
+      !a2 ||
+      !hid1 ||
+      !hid2 ||
+      !form
+    ) {
+      return;
+    }
 
     let submitted = false;
 
     a1.value = artistA;
     a2.value = artistB;
 
-    if (findBtn) findBtn.disabled = true;
+    if (findBtn) {
+      findBtn.disabled = true;
+    }
+
     startLoadingAnimation();
 
     try {
@@ -863,12 +1273,14 @@
           resultsEl.textContent =
             'Could not find one or both artists from this shared link. Please select them manually.';
         }
+
         return;
       }
 
-      // Fill in the verified names and IDs, then let the form handler do the rest.
+      // Fill verified names and IDs, then use the normal form submission.
       a1.value = matchA.name;
       a2.value = matchB.name;
+
       hid1.value = matchA.id;
       hid2.value = matchB.id;
 
@@ -877,15 +1289,24 @@
 
     } catch (error) {
       console.error('Could not load shared route:', error);
+
       if (resultsEl) {
         resultsEl.textContent =
-          'Could not load this shared connection. Please try searching manually.';
+          'Could not load this shared connection. Please select them manually.';
       }
+
     } finally {
-      // Only clean up here if form submission never started (it cleans up after itself).
+      // The form handler handles cleanup if submission started.
       if (!submitted) {
-        stopLoadingAnimation();
-        if (findBtn) findBtn.disabled = false;
+        await stopLoadingAnimation();
+
+        if (resultsEl) {
+          resultsEl.style.visibility = '';
+        }
+
+        if (findBtn) {
+          findBtn.disabled = false;
+        }
       }
     }
   }
@@ -895,10 +1316,14 @@
     setupAutocompleteFor(a1, dropdown1);
     setupAutocompleteFor(a2, dropdown2);
   } else {
-    console.warn('Autocomplete inputs or dropdowns missing; autocomplete not initialized.');
+    console.warn(
+      'Autocomplete inputs or dropdowns missing; autocomplete not initialized.'
+    );
   }
 
-  if (resultsEl) resultsEl.addEventListener('click', handleResultsClick);
+  if (resultsEl) {
+    resultsEl.addEventListener('click', handleResultsClick);
+  }
 
   loadSharedRoute();
 })();
